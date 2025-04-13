@@ -3,9 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <title>디마니코 뉴스 트래커</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: 'Arial', sans-serif; background: #f4f6f9; margin: 0; padding: 16px; }
+    h1 { text-align: center; color: #222; }
+    .sheet-nav { position: sticky; top: 0; background: #fff; padding: 10px 0; border-bottom: 1px solid #ddd; z-index: 999; overflow-x: auto; white-space: nowrap; }
+    .sheet-nav button { margin: 0 6px; padding: 8px 12px; border-radius: 16px; border: 1px solid #ccc; background: #f9f9f9; cursor: pointer; font-size: 0.95em; display: inline-block; }
+    .sheet-nav button.active { background: #007bff; color: white; border-color: #007bff; }
+    .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
+    .news-item { padding: 12px 0; border-bottom: 1px solid #eee; }
+    .news-title { font-weight: bold; color: #222; }
+    .news-time { font-size: 0.85em; color: #666; margin-top: 4px; }
+    .news-link a { font-size: 0.85em; color: #007bff; text-decoration: none; }
+    .loading { color: #888; font-size: 0.95em; padding: 12px; text-align: center; }
+  </style>
 </head>
 <body>
-  <h1>디마니코 뉴스 트래커</h1>
-  <p>서비스가 정상적으로 실행 중입니다.</p>
+<h1>디마니코 뉴스 트래커</h1>
+<div id="sheet-nav" class="sheet-nav"></div>
+<div id="content"><p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p></div>
+
+<script>
+let currentBtn = null;
+
+function loadSheet(gid, name, btn) {
+  if (currentBtn) currentBtn.classList.remove('active');
+  currentBtn = btn;
+  btn.classList.add('active');
+
+  document.getElementById("content").innerHTML = "<p class='loading'>⏳ 뉴스 데이터를 불러오는 중입니다...</p>";
+  fetch(`/sheet/${gid}`)
+    .then(res => res.json())
+    .then(data => {
+      const container = document.createElement("div");
+      container.innerHTML = `<div class="sheet-title">📌 ${name}</div>`;
+      data.forEach(row => {
+        const title = row["대표 뉴스 제목"] || row["뉴스 제목"];
+        const link = row["최신 뉴스 링크"] || row["링크"];
+        const latest = row["최신 뉴스 시간"] || row["시간"];
+        const first = row["최초 뉴스 시간"];
+        if (!title || !link) return;
+
+        const item = document.createElement("div");
+        item.className = "news-item";
+        item.innerHTML = `
+          <div class="news-title">${title}</div>
+          <div class="news-time">🕒 ${first || ""} ~ ${latest}</div>
+          <div class="news-link"><a href="${link}" target="_blank">👉 뉴스 보러가기</a></div>
+        `;
+        container.appendChild(item);
+      });
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+      content.appendChild(container);
+    });
+}
+
+// 시트 목록 불러오기
+fetch("/sheets")
+  .then(res => res.json())
+  .then(sheets => {
+    const nav = document.getElementById("sheet-nav");
+    sheets.forEach((sheet, i) => {
+      const btn = document.createElement("button");
+      btn.textContent = sheet.name;
+      btn.onclick = () => loadSheet(sheet.gid, sheet.name, btn);
+      nav.appendChild(btn);
+      if (i === 0) loadSheet(sheet.gid, sheet.name, btn);
+    });
+  });
+</script>
 </body>
 </html>
