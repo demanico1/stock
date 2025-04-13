@@ -3,68 +3,27 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>디마니코 뉴스 트래커 - 오늘 HOT</title>
+  <title>디마니코 뉴스 트래커</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      background-color: #f5f5f5;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    .accordion {
-      background-color: #fff;
-      color: #333;
-      cursor: pointer;
-      padding: 16px;
-      width: 100%;
-      border: none;
-      text-align: left;
-      outline: none;
-      font-size: 1.1em;
-      font-weight: bold;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      margin-top: 10px;
-    }
-    .active, .accordion:hover {
-      background-color: #e0eaff;
-    }
-    .panel {
-      padding: 0 18px;
-      background-color: white;
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.2s ease-out;
-      border-left: 4px solid #007bff;
-      border-radius: 0 0 8px 8px;
-    }
-    .news-item {
-      padding: 10px 0;
-      border-bottom: 1px solid #ddd;
-    }
-    .news-title {
-      font-weight: bold;
-      color: #222;
-      margin-bottom: 4px;
-    }
-    .news-time {
-      font-size: 0.9em;
-      color: #666;
-    }
-    .news-link a {
-      font-size: 0.9em;
-      color: #007bff;
-      text-decoration: none;
-    }
+    body { font-family: 'Arial', sans-serif; background-color: #f5f5f5; margin: 0; padding: 20px; }
+    h1 { text-align: center; color: #333; }
+    .sheet-title { font-size: 1.2em; font-weight: bold; margin-top: 30px; margin-bottom: 10px; color: #0055aa; }
+    .accordion { background-color: #fff; color: #333; cursor: pointer; padding: 16px; width: 100%;
+      border: none; text-align: left; outline: none; font-size: 1.05em; font-weight: bold;
+      border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-top: 10px; }
+    .active, .accordion:hover { background-color: #e0eaff; }
+    .panel { padding: 0 18px; background-color: white; max-height: 0; overflow: hidden;
+      transition: max-height 0.2s ease-out; border-left: 4px solid #007bff; border-radius: 0 0 8px 8px; }
+    .news-item { padding: 10px 0; border-bottom: 1px solid #ddd; }
+    .news-title { font-weight: bold; color: #222; margin-bottom: 4px; }
+    .news-time { font-size: 0.9em; color: #666; }
+    .news-link a { font-size: 0.9em; color: #007bff; text-decoration: none; }
   </style>
 </head>
 <body>
-<h1>디마니코 뉴스 트래커 - 오늘 HOT</h1>
+<h1>디마니코 뉴스 트래커</h1>
+<div class="sheet-title">📌 오늘 HOT</div>
 
     <button class="accordion">📰 [단독] 한미약품, 파브리병 치료 신약 ‘HM15421’ 임상 돌입 ... 개발 본격화 <span style="color:gray;">(3건, 2채널)</span></button>
     <div class="panel">
