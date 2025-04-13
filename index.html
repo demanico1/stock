@@ -8,9 +8,10 @@
   <style>
     body { font-family: 'Arial', sans-serif; background: #f4f6f9; margin: 0; padding: 16px; }
     h1 { text-align: center; color: #222; }
-    .sheet-nav { position:sticky;top:0;background:#fff;padding:10px 0;border-bottom:1px solid #ddd;z-index:999; }
+    .sheet-nav { position:sticky;top:0;background:#fff;padding:10px 0;border-bottom:1px solid #ddd;z-index:999; overflow-x: auto; white-space: nowrap;}
     .sheet-nav button { margin: 0 6px; padding: 8px 12px; border-radius: 16px; border:1px solid #ccc;
-      background:#f9f9f9; cursor:pointer; font-size: 0.95em; }
+      background:#f9f9f9; cursor:pointer; font-size: 0.95em; display:inline-block; }
+    .sheet-nav button.active { background: #007bff; color: white; border-color: #007bff; }
     .sheet-section { margin-top: 24px; }
     .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
 
@@ -37,7 +38,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 <script>
-// === CONFIG ===
 const SPREADSHEET_ID = "1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4";
 const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
 
@@ -47,47 +47,47 @@ function fetchSheetList(callback) {
     .then(text => {
       const json = JSON.parse(text.substr(47).slice(0, -2));
       const sheets = json.table.rows.map(row => {
-  const raw = row.c[0]?.v;
-  const name = typeof raw === 'object' ? raw?.v || raw?.f : raw;
-  const gid = row.c[1]?.v;
-  return {
-        name,
-        gid: gid?.toString(),
-        grouped: /(HOT|채널|이슈)/.test(name)
-      }; }).filter(s => s.name && s.gid);
+        const raw = row.c[0]?.v;
+        const name = typeof raw === 'object' ? raw?.v || raw?.f : raw;
+        const gid = row.c[1]?.v;
+        return {
+          name,
+          gid: gid?.toString(),
+          grouped: /(HOT|채널|이슈)/.test(name)
+        };
+      }).filter(s => s.name && s.gid);
       callback(sheets);
     });
 }
 
 function renderSheetNav(sheets) {
   const nav = document.getElementById("sheet-nav");
-  sheets.forEach(s => {
+  nav.innerHTML = "";
+  sheets.forEach((s, idx) => {
     const btn = document.createElement("button");
     btn.textContent = s.name;
-    btn.onclick = () => scrollToSheet(s.name);
+    btn.onclick = () => {
+      document.querySelectorAll(".sheet-nav button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentSheet = s;
+      fetchAndRenderOne(s);
+    };
+    if (idx === 0) btn.classList.add("active");
     nav.appendChild(btn);
   });
-}
-
-function scrollToSheet(sheetId) {
-  const target = document.getElementById(sheetId);
-  if (target) {
-    target.scrollIntoView({ behavior: 'smooth' });
-  }
 }
 
 function renderSheet(sheet, data) {
   const container = document.createElement("div");
   container.className = "sheet-section";
   container.innerHTML = `<div class="sheet-title" id="${sheet.name}">📌 ${sheet.name}</div>`;
-
   data.forEach(row => {
-    const title = row["대표 뉴스 제목"];
-    const link = row["최신 뉴스 링크"];
+    const title = row["대표 뉴스 제목"] || row["뉴스 제목"];
+    const link = row["최신 뉴스 링크"] || row["링크"];
     const count = row["관련뉴스 수"];
-    const latest = row["최신 뉴스 시간"];
+    const latest = row["최신 뉴스 시간"] || row["시간"];
     const first = row["최초 뉴스 시간"];
-    const mention = row["언급 채널 수"];
+    const mention = row["언급 채널 수"] || "";
 
     if (!title || !link) return;
 
@@ -101,11 +101,10 @@ function renderSheet(sheet, data) {
       panel.innerHTML = `
         <div class="news-item">
           <div class="news-title">${title}</div>
-          <div class="news-time">🕒 ${first} ~ ${latest}</div>
+          <div class="news-time">🕒 ${first || ""} ~ ${latest}</div>
           <div class="news-link"><a href="${link}" target="_blank">👉 뉴스 보러가기</a></div>
         </div>
       `;
-
       acc.addEventListener("click", function () {
         this.classList.toggle("active");
         panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
@@ -118,20 +117,19 @@ function renderSheet(sheet, data) {
       item.className = "news-item";
       item.innerHTML = `
         <div class="news-title">${title}</div>
-        <div class="news-time">🕒 ${first} ~ ${latest}</div>
+        <div class="news-time">🕒 ${latest}</div>
         <div class="news-link"><a href="${link}" target="_blank">👉 뉴스 보러가기</a></div>
       `;
       container.appendChild(item);
     }
   });
-
   return container;
 }
 
 function fetchAndRenderOne(sheet) {
   const content = document.getElementById("content");
   content.innerHTML = '<p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p>';
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${sheet.gid}`;
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${sheet.gid}`;
   Papa.parse(url, {
     download: true,
     header: true,
@@ -143,8 +141,6 @@ function fetchAndRenderOne(sheet) {
   });
 }
 
-
-// === INIT ===
 let currentSheet = null;
 fetchSheetList(sheets => {
   renderSheetNav(sheets);
@@ -152,15 +148,7 @@ fetchSheetList(sheets => {
     currentSheet = sheets[0];
     fetchAndRenderOne(currentSheet);
   }
-  const nav = document.getElementById("sheet-nav").children;
-  sheets.forEach((s, i) => {
-    nav[i].onclick = () => {
-      currentSheet = s;
-      fetchAndRenderOne(s);
-    };
-  });
 
-  // ⏱ 자동 새로고침 유지 (60초)
   setInterval(() => {
     if (currentSheet) fetchAndRenderOne(currentSheet);
   }, 60000);
