@@ -129,7 +129,7 @@ function fetchAndRenderAll(sheets) {
   content.innerHTML = "";
 
   sheets.forEach(sheet => {
-    const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${sheet.gid}`;
+    const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${sheet.gid}`;
     Papa.parse(url, {
       download: true,
       header: true,
