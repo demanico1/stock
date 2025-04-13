@@ -1,21 +1,15 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// index.html 경로를 정확히 지정
+// public 폴더에서 정적 파일 제공 (index.html 포함)
+app.use(express.static(path.join(__dirname, '.')));
+
+// 기본 경로에서 index.html 제공
 app.get('/', (req, res) => {
-  const filePath = path.join(__dirname, 'index.html');
-  fs.readFile(filePath, 'utf8', (err, html) => {
-    if (err) {
-      res.status(500).send('파일을 불러올 수 없습니다.');
-    } else {
-      res.setHeader('Content-Type', 'text/html');
-      res.send(html);
-    }
-  });
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
