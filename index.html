@@ -27,13 +27,29 @@
     .loading { color: #888; font-size: 0.95em; padding: 12px; }
   </style>
 </head>
+
 <body>
+<div id="sheet-nav" style="position:sticky;top:0;background:#fff;z-index:1000;padding:10px 0 6px;border-bottom:1px solid #eee;">
+  <div style="overflow-x:auto;white-space:nowrap;text-align:center;">
+    <button onclick="scrollToSheet('오늘 HOT')" style="margin: 0 6px; padding: 8px 12px; border-radius: 16px; border:1px solid #ccc; background:#f9f9f9; cursor:pointer;">오늘 HOT</button>
+    <!-- 추가 시트 버튼은 여기에 -->
+  </div>
+</div>
+
 <h1>디마니코 뉴스 트래커</h1>
 <div id="content">
   <p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js">
+function scrollToSheet(sheetId) {
+  const target = document.getElementById(sheetId);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+</script>
+
 <script>
 // ===== CONFIG =====
 const SHEETS = [
@@ -119,6 +135,14 @@ function fetchAndRenderAll() {
 // 최초 실행 + 60초마다 반복
 fetchAndRenderAll();
 setInterval(fetchAndRenderAll, 60000);
+
+function scrollToSheet(sheetId) {
+  const target = document.getElementById(sheetId);
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth' });
+  }
+}
 </script>
+
 </body>
 </html>
