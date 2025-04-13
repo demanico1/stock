@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>디마니코 전체 시트 (업데이트 시간 포함)</title>
+  <title>디마니코 전체 시트 (정교한 시간 표기)</title>
   <style>
     html, body {
       margin: 0;
@@ -36,13 +36,38 @@
 
   <script>
     const now = new Date();
-    const formatted = now.getFullYear() + '-' + 
-                      String(now.getMonth()+1).padStart(2, '0') + '-' + 
-                      String(now.getDate()).padStart(2, '0') + ' ' + 
-                      String(now.getHours()).padStart(2, '0') + ':' + 
-                      String(now.getMinutes()).padStart(2, '0') + ':' + 
-                      String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('timestamp').textContent = "⏱️ 마지막 업데이트: " + formatted;
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const kstDate = new Date(now.getTime() + kstOffset);
+
+    const days = ["일", "월", "화", "수", "목", "금", "토"];
+    const dayName = days[kstDate.getDay()];
+
+    const yyyy = kstDate.getFullYear();
+    const mm = String(kstDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(kstDate.getDate()).padStart(2, '0');
+    const hh = String(kstDate.getHours()).padStart(2, '0');
+    const mi = String(kstDate.getMinutes()).padStart(2, '0');
+    const ss = String(kstDate.getSeconds()).padStart(2, '0');
+
+    const formatted = `${yyyy}-${mm}-${dd} (${dayName}) ${hh}:${mi}:${ss}`;
+
+    // 상대 시간 표기
+    const diffMs = new Date() - now;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    let relative = "방금 전";
+    if (diffDay >= 1) {
+      relative = `${diffDay}일 전`;
+    } else if (diffHour >= 1) {
+      relative = `${diffHour}시간 전`;
+    } else if (diffMin >= 1) {
+      relative = `${diffMin}분 전`;
+    }
+
+    document.getElementById('timestamp').textContent = `⏱️ 마지막 업데이트: ${formatted} (${relative})`;
   </script>
 </body>
 </html>
