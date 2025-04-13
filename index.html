@@ -143,21 +143,6 @@ function fetchAndRenderOne(sheet) {
   });
 }
 
-  const content = document.getElementById("content");
-  content.innerHTML = "";
-
-  sheets.forEach(sheet => {
-    const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${sheet.gid}`;
-    Papa.parse(url, {
-      download: true,
-      header: true,
-      complete: results => {
-        const block = renderSheet(sheet, results.data);
-        content.appendChild(block);
-      }
-    });
-  });
-}
 
 // === INIT ===
 let currentSheet = null;
