@@ -1,27 +1,23 @@
-import express from "express";
-import { google } from "googleapis";
-import fs from "fs";
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
-const auth = new google.auth.GoogleAuth({
-  keyFile: "credentials.json",
-  scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+// index.html 경로를 정확히 지정
+app.get('/', (req, res) => {
+  const filePath = path.join(__dirname, 'index.html');
+  fs.readFile(filePath, 'utf8', (err, html) => {
+    if (err) {
+      res.status(500).send('파일을 불러올 수 없습니다.');
+    } else {
+      res.setHeader('Content-Type', 'text/html');
+      res.send(html);
+    }
+  });
 });
 
-app.get("/sheets", async (req, res) => {
-  const client = await auth.getClient();
-  const sheets = google.sheets({ version: "v4", auth: client });
-
-  const spreadsheetId = "1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4";
-  const response = await sheets.spreadsheets.get({ spreadsheetId });
-
-  const result = response.data.sheets.map((sheet) => ({
-    name: sheet.properties.title,
-    gid: sheet.properties.sheetId,
-  }));
-  res.json(result);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
