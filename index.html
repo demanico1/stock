@@ -128,7 +128,21 @@ function renderSheet(sheet, data) {
   return container;
 }
 
-function fetchAndRenderAll(sheets) {
+function fetchAndRenderOne(sheet) {
+  const content = document.getElementById("content");
+  content.innerHTML = '<p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p>';
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${sheet.gid}`;
+  Papa.parse(url, {
+    download: true,
+    header: true,
+    complete: results => {
+      content.innerHTML = '';
+      const block = renderSheet(sheet, results.data);
+      content.appendChild(block);
+    }
+  });
+}
+
   const content = document.getElementById("content");
   content.innerHTML = "";
 
@@ -148,8 +162,13 @@ function fetchAndRenderAll(sheets) {
 // === INIT ===
 fetchSheetList(sheets => {
   renderSheetNav(sheets);
-  fetchAndRenderAll(sheets);
-  setInterval(() => fetchAndRenderAll(sheets), 60000);
+  if (sheets.length > 0) {
+    fetchAndRenderOne(sheets[0]);
+  }
+  const nav = document.getElementById("sheet-nav").children;
+  sheets.forEach((s, i) => {
+    nav[i].onclick = () => fetchAndRenderOne(s);
+  });
 });
 </script>
 </body>
