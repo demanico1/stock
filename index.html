@@ -46,7 +46,11 @@ function fetchSheetList(callback) {
     .then(res => res.text())
     .then(text => {
       const json = JSON.parse(text.substr(47).slice(0, -2));
-      const sheets = json.table.rows.map(row => { const name = row.c[0]?.v; const gid = row.c[1]?.v; return {
+      const sheets = json.table.rows.map(row => {
+  const raw = row.c[0]?.v;
+  const name = typeof raw === 'object' ? raw?.v || raw?.f : raw;
+  const gid = row.c[1]?.v;
+  return {
         name,
         gid: gid?.toString(),
         grouped: /(HOT|채널|이슈)/.test(name)
