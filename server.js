@@ -1,17 +1,22 @@
-const express = require('express');
-const path = require('path');
+app.get('/sheets', async (req, res) => {
+  try {
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
+    const client = await auth.getClient();
+    const sheets = google.sheets({ version: 'v4', auth: client });
 
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-// 정적 파일 제공 (index.html 포함)
-app.use(express.static(path.join(__dirname, '.')));
-
-// 기본 라우트 처리
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    const spreadsheetId = "1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4";
+    const meta = await sheets.spreadsheets.get({ spreadsheetId });
+    const result = meta.data.sheets.map(s => ({
+      name: s.properties.title,
+      gid: s.properties.sheetId,
+      grouped: /(HOT|채널|이슈)/.test(s.properties.title),
+    }));
+    res.json(result);
+  } catch (error) {
+    console.error("시트 목록 불러오기 실패:", error.message);
+    res.status(500).send("시트 불러오기 실패");
+  }
 });
