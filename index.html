@@ -38,19 +38,19 @@
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
 <script>
 // === CONFIG ===
-const SPREADSHEET_ID = "1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4";
-const GVIZ_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
+const SPREADSHEET_ID = "2PACX-1vREtGkXdYpNmlEf8pc1p6vpOoOmmhRC1plwNbWGCz-soto3fBDACuaN5Agm9tCGx2wZNxJnJM5ycvNR";
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/e/${SPREADSHEET_ID}/gviz/tq?`;
 
 function fetchSheetList(callback) {
   fetch(GVIZ_URL)
     .then(res => res.text())
     .then(text => {
       const json = JSON.parse(text.substr(47).slice(0, -2));
-      const sheets = json.table.cols.map((_, i) => ({
+      const sheets = json.table.rows.map(row => { const name = row.c[0]?.v; const gid = row.c[1]?.v; return {
         name: json.table.rows[i].c[0].v,
         gid: json.table.rows[i].c[1].v.toString(),
-        grouped: /(HOT|채널|이슈)/.test(json.table.rows[i].c[0].v)
-      }));
+        grouped: /(HOT|채널|이슈)/.test(name)
+      }; }).filter(s => s.name && s.gid);
       callback(sheets);
     });
 }
@@ -129,7 +129,7 @@ function fetchAndRenderAll(sheets) {
   content.innerHTML = "";
 
   sheets.forEach(sheet => {
-    const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${sheet.gid}`;
+    const url = `https://docs.google.com/spreadsheets/d/e/${SPREADSHEET_ID}/pub?output=csv&gid=${sheet.gid}`;
     Papa.parse(url, {
       download: true,
       header: true,
