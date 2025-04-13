@@ -160,15 +160,25 @@ function fetchAndRenderOne(sheet) {
 }
 
 // === INIT ===
+let currentSheet = null;
 fetchSheetList(sheets => {
   renderSheetNav(sheets);
   if (sheets.length > 0) {
-    fetchAndRenderOne(sheets[0]);
+    currentSheet = sheets[0];
+    fetchAndRenderOne(currentSheet);
   }
   const nav = document.getElementById("sheet-nav").children;
   sheets.forEach((s, i) => {
-    nav[i].onclick = () => fetchAndRenderOne(s);
+    nav[i].onclick = () => {
+      currentSheet = s;
+      fetchAndRenderOne(s);
+    };
   });
+
+  // ⏱ 자동 새로고침 유지 (60초)
+  setInterval(() => {
+    if (currentSheet) fetchAndRenderOne(currentSheet);
+  }, 60000);
 });
 </script>
 </body>
