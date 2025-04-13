@@ -2,72 +2,254 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
+  <title>디마니코 뉴스 트래커 - 오늘 HOT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>디마니코 전체 시트 (정교한 시간 표기)</title>
   <style>
-    html, body {
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f5f5f5;
       margin: 0;
-      padding: 0;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
+      padding: 20px;
     }
-    iframe {
-      flex: 1;
-      border: none;
-      width: 100%;
-    }
-    #timestamp {
-      background: #f0f0f0;
-      font-size: 14px;
+    h1 {
       text-align: center;
-      padding: 10px;
-      border-top: 1px solid #ccc;
+      color: #333;
+    }
+    .accordion {
+      background-color: #fff;
+      color: #333;
+      cursor: pointer;
+      padding: 16px;
+      width: 100%;
+      border: none;
+      text-align: left;
+      outline: none;
+      font-size: 1.1em;
+      font-weight: bold;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin-top: 10px;
+    }
+    .active, .accordion:hover {
+      background-color: #e0eaff;
+    }
+    .panel {
+      padding: 0 18px;
+      background-color: white;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.2s ease-out;
+      border-left: 4px solid #007bff;
+      border-radius: 0 0 8px 8px;
+    }
+    .news-item {
+      padding: 10px 0;
+      border-bottom: 1px solid #ddd;
+    }
+    .news-title {
+      font-weight: bold;
+      color: #222;
+      margin-bottom: 4px;
+    }
+    .news-time {
+      font-size: 0.9em;
+      color: #666;
+    }
+    .news-link a {
+      font-size: 0.9em;
+      color: #007bff;
+      text-decoration: none;
     }
   </style>
 </head>
 <body>
-  <iframe 
-    src="https://docs.google.com/spreadsheets/d/e/2PACX-1vREtGkXdYpNmlEf8pc1p6vpOoOmmhRC1plwNbWGCz-soto3fBDACuaN5Agm9tCGx2wZNxJnJM5ycvNR/pubhtml"
-    allowfullscreen>
-  </iframe>
-  <div id="timestamp">업데이트 시간 계산 중...</div>
+<h1>디마니코 뉴스 트래커 - 오늘 HOT</h1>
 
-  <script>
-    const now = new Date();
-    const kstOffset = 9 * 60 * 60 * 1000;
-    const kstDate = new Date(now.getTime() + kstOffset);
-
-    const days = ["일", "월", "화", "수", "목", "금", "토"];
-    const dayName = days[kstDate.getDay()];
-
-    const yyyy = kstDate.getFullYear();
-    const mm = String(kstDate.getMonth() + 1).padStart(2, '0');
-    const dd = String(kstDate.getDate()).padStart(2, '0');
-    const hh = String(kstDate.getHours()).padStart(2, '0');
-    const mi = String(kstDate.getMinutes()).padStart(2, '0');
-    const ss = String(kstDate.getSeconds()).padStart(2, '0');
-
-    const formatted = `${yyyy}-${mm}-${dd} (${dayName}) ${hh}:${mi}:${ss}`;
-
-    // 상대 시간 표기
-    const diffMs = new Date() - now;
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
-
-    let relative = "방금 전";
-    if (diffDay >= 1) {
-      relative = `${diffDay}일 전`;
-    } else if (diffHour >= 1) {
-      relative = `${diffHour}시간 전`;
-    } else if (diffMin >= 1) {
-      relative = `${diffMin}분 전`;
-    }
-
-    document.getElementById('timestamp').textContent = `⏱️ 마지막 업데이트: ${formatted} (${relative})`;
-  </script>
+    <button class="accordion">📰 [단독] 한미약품, 파브리병 치료 신약 ‘HM15421’ 임상 돌입 ... 개발 본격화 <span style="color:gray;">(3건, 2채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[단독] 한미약품, 파브리병 치료 신약 ‘HM15421’ 임상 돌입 ... 개발 본격화</div>
+        <div class="news-time">🕒 05:48 (31분전) ~ 05:52 (27분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6674919" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 '관세 예외'에 찬물…美상무 "상호관세 제외 전자제품, 반도체 관세 포함" <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">'관세 예외'에 찬물…美상무 "상호관세 제외 전자제품, 반도체 관세 포함"</div>
+        <div class="news-time">🕒 05:16 (1시간 3분전) ~ 06:12 (7분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6675022" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 정부 "구리 관세 부과 시 韓 배터리사 대미 투자 차질" <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">정부 "구리 관세 부과 시 韓 배터리사 대미 투자 차질"</div>
+        <div class="news-time">🕒 04:58 (1시간 22분전) ~ 05:50 (30분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6674918" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [속보] 트럼프 “전자제품 관세 면제 아니다…반도체 등 조사 예정” <span style="color:gray;">(3건, 2채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[속보] 트럼프 “전자제품 관세 면제 아니다…반도체 등 조사 예정”</div>
+        <div class="news-time">🕒 04:45 (1시간 34분전) ~ 05:06 (1시간 13분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6674870" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 美 전자제품 관세 혼란…상호관세 없어도 품목관세는 못 피할 듯 <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">美 전자제품 관세 혼란…상호관세 없어도 품목관세는 못 피할 듯</div>
+        <div class="news-time">🕒 04:08 (2시간 11분전) ~ 06:16 (3분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6675036" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 블룸버그 "애플, 증강현실 안경 제품 개발에 열중" <span style="color:gray;">(4건, 2채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">블룸버그 "애플, 증강현실 안경 제품 개발에 열중"</div>
+        <div class="news-time">🕒 02:21 (3시간 59분전) ~ 05:58 (22분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6674931" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [텔레그램] 가장 빠른 실시간 주식공시 (공시 미리보기 탑재) <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[텔레그램] 가장 빠른 실시간 주식공시 (공시 미리보기 탑재)</div>
+        <div class="news-time">🕒 02:00 (4시간 20분전) ~ 04:34 (1시간 45분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/etc/tel/stockdart" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 네타냐후 아들 '팔 국가 인정 추진' 마크롱에 "엿 먹으라" <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">네타냐후 아들 '팔 국가 인정 추진' 마크롱에 "엿 먹으라"</div>
+        <div class="news-time">🕒 01:22 (4시간 58분전) ~ 04:24 (1시간 55분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6674805" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 윤 전 대통령, 오늘 첫 재판...비공개 출석 전망 <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">윤 전 대통령, 오늘 첫 재판...비공개 출석 전망</div>
+        <div class="news-time">🕒 01:02 (5시간 18분전) ~ 03:30 (2시간 49분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6674787" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [글로벌 비즈 브리핑] 세계 최대 연기금들, 美 투자 '중단' 검토 外 <span style="color:gray;">(5건, 2채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[글로벌 비즈 브리핑] 세계 최대 연기금들, 美 투자 '중단' 검토 外</div>
+        <div class="news-time">🕒 01:01 (5시간 19분전) ~ 04:46 (1시간 33분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6674823" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [이데일리] 홍준표, 오늘 대선 출마…'사형제 부활' 등 공약 눈길 <span style="color:gray;">(7건, 2채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[이데일리] 홍준표, 오늘 대선 출마…'사형제 부활' 등 공약 눈길</div>
+        <div class="news-time">🕒 01:00 (5시간 19분전) ~ 06:01 (18분전)</div>
+        <div class="news-link"><a href="https://www.edaily.co.kr/news/read?newsId=01200486642136120" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 CBS 여론조사…미국인 75% "관세정책, 美 물가에 악영향" <span style="color:gray;">(5건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">CBS 여론조사…미국인 75% "관세정책, 美 물가에 악영향"</div>
+        <div class="news-time">🕒 00:58 (5시간 22분전) ~ 05:52 (27분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6674920" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [네이버뉴스] 김경수 출마로 '4파전'‥경선 규칙 막판 쟁점 <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[네이버뉴스] 김경수 출마로 '4파전'‥경선 규칙 막판 쟁점</div>
+        <div class="news-time">🕒 00:57 (5시간 23분전) ~ 06:18 (1분전)</div>
+        <div class="news-link"><a href="https://n.news.naver.com/mnews/article/214/0001417924?rc=N&ntype=RANKING&sid=001" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [네이버뉴스] 현대차·기아, 인도에서 1분기 최다 판매...현지형 SUV 모델 통했다 <span style="color:gray;">(5건, 2채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[네이버뉴스] 현대차·기아, 인도에서 1분기 최다 판매...현지형 SUV 모델 통했다</div>
+        <div class="news-time">🕒 00:52 (5시간 27분전) ~ 06:00 (19분전)</div>
+        <div class="news-link"><a href="https://n.news.naver.com/mnews/article/469/0000859325?rc=N&ntype=RANKING&sid=001" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [네이버뉴스] 숙박·음식업 ‘역대 최장’ 불황… 취업도 5분기 연속 감소 <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[네이버뉴스] 숙박·음식업 ‘역대 최장’ 불황… 취업도 5분기 연속 감소</div>
+        <div class="news-time">🕒 00:51 (5시간 28분전) ~ 05:03 (1시간 16분전)</div>
+        <div class="news-link"><a href="https://n.news.naver.com/mnews/article/081/0003533113?rc=N&ntype=RANKING&sid=001" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [네이버뉴스] 한 대행, 국민의힘 경선에 불참할 듯…출마론에 침묵 <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[네이버뉴스] 한 대행, 국민의힘 경선에 불참할 듯…출마론에 침묵</div>
+        <div class="news-time">🕒 00:26 (5시간 54분전) ~ 05:46 (33분전)</div>
+        <div class="news-link"><a href="https://n.news.naver.com/mnews/article/422/0000730726?rc=N&ntype=RANKING&sid=001" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 이재명, AI 반도체 기업 방문…4파전 가능성 <span style="color:gray;">(5건, 2채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">이재명, AI 반도체 기업 방문…4파전 가능성</div>
+        <div class="news-time">🕒 00:12 (6시간 8분전) ~ 06:16 (3분전)</div>
+        <div class="news-link"><a href="https://stockinfo7.com/news/pick/url/6675032" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [네이버뉴스] 이재명, 출마후 첫 일정으로 퓨리오사AI 방문…"성장경제 행보" <span style="color:gray;">(4건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[네이버뉴스] 이재명, 출마후 첫 일정으로 퓨리오사AI 방문…"성장경제 행보"</div>
+        <div class="news-time">🕒 00:10 (6시간 10분전) ~ 05:30 (49분전)</div>
+        <div class="news-link"><a href="https://n.news.naver.com/mnews/article/001/0015327467?rc=N&ntype=RANKING&sid=001" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+    <button class="accordion">📰 [SBS] 유승민 "경선 불참"…홍준표 오늘 출마 선언 <span style="color:gray;">(3건, 1채널)</span></button>
+    <div class="panel">
+      <div class="news-item">
+        <div class="news-title">[SBS] 유승민 "경선 불참"…홍준표 오늘 출마 선언</div>
+        <div class="news-time">🕒 00:08 (6시간 12분전) ~ 06:19 (1분전)</div>
+        <div class="news-link"><a href="https://news.sbs.co.kr/news/endPage.do?news_id=N1008061108" target="_blank">👉 뉴스 보러가기</a></div>
+      </div>
+    </div>
+    
+<script>
+  const acc = document.getElementsByClassName("accordion");
+  for (let i = 0; i < acc.length; i++) {
+    acc[i].addEventListener("click", function() {
+      this.classList.toggle("active");
+      const panel = this.nextElementSibling;
+      if (panel.style.maxHeight) {
+        panel.style.maxHeight = null;
+      } else {
+        panel.style.maxHeight = panel.scrollHeight + "px";
+      }
+    });
+  }
+</script>
 </body>
 </html>
