@@ -3,11 +3,14 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>디마니코 뉴스 트래커 (실시간)</title>
+  <title>디마니코 뉴스 트래커 (자동 시트 인식)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: 'Arial', sans-serif; margin: 0; padding: 16px; background: #f4f6f9; }
+    body { font-family: 'Arial', sans-serif; background: #f4f6f9; margin: 0; padding: 16px; }
     h1 { text-align: center; color: #222; }
+    .sheet-nav { position:sticky;top:0;background:#fff;padding:10px 0;border-bottom:1px solid #ddd;z-index:999; }
+    .sheet-nav button { margin: 0 6px; padding: 8px 12px; border-radius: 16px; border:1px solid #ccc;
+      background:#f9f9f9; cursor:pointer; font-size: 0.95em; }
     .sheet-section { margin-top: 24px; }
     .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
 
@@ -24,45 +27,55 @@
     .news-time { font-size: 0.85em; color: #666; margin-top: 4px; }
     .news-link a { font-size: 0.85em; color: #007bff; text-decoration: none; }
 
-    .loading { color: #888; font-size: 0.95em; padding: 12px; }
+    .loading { color: #888; font-size: 0.95em; padding: 12px; text-align: center; }
   </style>
 </head>
-
 <body>
-<div id="sheet-nav" style="position:sticky;top:0;background:#fff;z-index:1000;padding:10px 0 6px;border-bottom:1px solid #eee;">
-  <div style="overflow-x:auto;white-space:nowrap;text-align:center;">
-    <button onclick="scrollToSheet('오늘 HOT')" style="margin: 0 6px; padding: 8px 12px; border-radius: 16px; border:1px solid #ccc; background:#f9f9f9; cursor:pointer;">오늘 HOT</button>
-    <!-- 추가 시트 버튼은 여기에 -->
-  </div>
-</div>
-
 <h1>디마니코 뉴스 트래커</h1>
-<div id="content">
-  <p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p>
-</div>
+<div id="sheet-nav" class="sheet-nav"></div>
+<div id="content"><p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p></div>
 
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+<script>
+// === CONFIG ===
+const SPREADSHEET_ID = "2PACX-1vREtGkXdYpNmlEf8pc1p6vpOoOmmhRC1plwNbWGCz-soto3fBDACuaN5Agm9tCGx2wZNxJnJM5ycvNR";
+const GVIZ_URL = `https://docs.google.com/spreadsheets/d/e/${SPREADSHEET_ID}/gviz/tq?`;
+
+function fetchSheetList(callback) {
+  fetch(GVIZ_URL)
+    .then(res => res.text())
+    .then(text => {
+      const json = JSON.parse(text.substr(47).slice(0, -2));
+      const sheets = json.table.cols.map((_, i) => ({
+        name: json.table.rows[i].c[0].v,
+        gid: json.table.rows[i].c[1].v.toString(),
+        grouped: /(HOT|채널|이슈)/.test(json.table.rows[i].c[0].v)
+      }));
+      callback(sheets);
+    });
+}
+
+function renderSheetNav(sheets) {
+  const nav = document.getElementById("sheet-nav");
+  sheets.forEach(s => {
+    const btn = document.createElement("button");
+    btn.textContent = s.name;
+    btn.onclick = () => scrollToSheet(s.name);
+    nav.appendChild(btn);
+  });
+}
+
 function scrollToSheet(sheetId) {
   const target = document.getElementById(sheetId);
   if (target) {
     target.scrollIntoView({ behavior: 'smooth' });
   }
 }
-</script>
 
-<script>
-// ===== CONFIG =====
-const SHEETS = [
-  { name: "오늘 HOT", gid: "1064508082", grouped: true },
-  // 새 시트 생기면 여기 추가 가능 or 나중에 자동화
-];
-const CSV_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vREtGkXdYpNmlEf8pc1p6vpOoOmmhRC1plwNbWGCz-soto3fBDACuaN5Agm9tCGx2wZNxJnJM5ycvNR/pub?output=csv&gid=";
-
-// ===== RENDERING =====
 function renderSheet(sheet, data) {
   const container = document.createElement("div");
   container.className = "sheet-section";
-  container.innerHTML = `<div class="sheet-title">📌 ${sheet.name}</div>`;
+  container.innerHTML = `<div class="sheet-title" id="${sheet.name}">📌 ${sheet.name}</div>`;
 
   data.forEach(row => {
     const title = row["대표 뉴스 제목"];
@@ -71,6 +84,8 @@ function renderSheet(sheet, data) {
     const latest = row["최신 뉴스 시간"];
     const first = row["최초 뉴스 시간"];
     const mention = row["언급 채널 수"];
+
+    if (!title || !link) return;
 
     if (sheet.grouped) {
       const acc = document.createElement("button");
@@ -109,40 +124,29 @@ function renderSheet(sheet, data) {
   return container;
 }
 
-// ===== DATA FETCH LOOP =====
-function fetchAndRenderAll() {
+function fetchAndRenderAll(sheets) {
   const content = document.getElementById("content");
-  content.innerHTML = ""; // 초기화
+  content.innerHTML = "";
 
-  SHEETS.forEach(sheet => {
-    const url = CSV_BASE + sheet.gid;
+  sheets.forEach(sheet => {
+    const url = `https://docs.google.com/spreadsheets/d/e/${SPREADSHEET_ID}/pub?output=csv&gid=${sheet.gid}`;
     Papa.parse(url, {
       download: true,
       header: true,
       complete: results => {
         const block = renderSheet(sheet, results.data);
         content.appendChild(block);
-      },
-      error: () => {
-        const err = document.createElement("p");
-        err.textContent = `❌ ${sheet.name} 시트를 불러올 수 없습니다`;
-        content.appendChild(err);
       }
     });
   });
 }
 
-// 최초 실행 + 60초마다 반복
-fetchAndRenderAll();
-setInterval(fetchAndRenderAll, 60000);
-
-function scrollToSheet(sheetId) {
-  const target = document.getElementById(sheetId);
-  if (target) {
-    target.scrollIntoView({ behavior: 'smooth' });
-  }
-}
+// === INIT ===
+fetchSheetList(sheets => {
+  renderSheetNav(sheets);
+  fetchAndRenderAll(sheets);
+  setInterval(() => fetchAndRenderAll(sheets), 60000);
+});
 </script>
-
 </body>
 </html>
