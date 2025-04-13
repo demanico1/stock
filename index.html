@@ -47,8 +47,8 @@ function fetchSheetList(callback) {
     .then(text => {
       const json = JSON.parse(text.substr(47).slice(0, -2));
       const sheets = json.table.rows.map(row => { const name = row.c[0]?.v; const gid = row.c[1]?.v; return {
-        name: json.table.rows[i].c[0].v,
-        gid: json.table.rows[i].c[1].v.toString(),
+        name,
+        gid: gid?.toString(),
         grouped: /(HOT|채널|이슈)/.test(name)
       }; }).filter(s => s.name && s.gid);
       callback(sheets);
