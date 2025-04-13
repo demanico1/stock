@@ -1,11 +1,13 @@
 {
-  "name": "dmanico-news-web",
+  "name": "stock-server",
   "version": "1.0.0",
+  "type": "commonjs",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "googleapis": "^124.0.0"
   }
 }
