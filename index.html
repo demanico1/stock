@@ -10,21 +10,20 @@
     .sheet-nav { position: sticky; top: 0; background: #fff; padding: 10px 0; border-bottom: 1px solid #ddd; z-index: 999; overflow-x: auto; white-space: nowrap; }
     .sheet-nav button { margin: 0 6px; padding: 8px 12px; border-radius: 16px; border: 1px solid #ccc; background: #f9f9f9; cursor: pointer; font-size: 0.95em; display: inline-block; }
     .sheet-nav button.active { background: #007bff; color: white; border-color: #007bff; }
-    .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
 
+    .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
     .news-card { background: #fff; padding: 16px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }
     .highlight-news { background: #fff7e6; }
-    .highlight-channel { background: #e6f0ff; }
-    .highlight-both { background: #f0e6ff; border: 2px solid #b58dff; }
+    .highlight-channel { background: #ffe6cc; }
+    .highlight-both { background: #ffe5e5; border: 2px solid #cc0000; }
 
-    .accordion { background: #fff; cursor: pointer; padding: 14px 16px; width: 100%; border: none; text-align: left; font-weight: bold; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 8px; transition: 0.3s; }
+    .accordion { background: #fff; font-weight: bold; cursor: pointer; padding: 14px 16px; width: 100%; border: none; text-align: left; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 8px; transition: 0.3s; }
     .accordion:hover, .accordion.active { background-color: #e4f0ff; }
     .panel { padding: 0 16px; background-color: white; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border-left: 3px solid #007bff; border-radius: 0 0 8px 8px; }
 
-    .news-item { padding: 12px 0; border-bottom: 1px solid #eee; }
-    .news-title { font-weight: bold; color: #222; font-size: 1em; }
-    .news-time { font-size: 0.85em; color: #666; margin-top: 4px; }
-    .news-link a { font-size: 0.85em; color: #007bff; text-decoration: none; }
+    .news-title { font-weight: bold; font-size: 1.1em; color: #222; }
+    .news-time { font-size: 0.9em; color: #666; margin-top: 6px; }
+    .news-link a { font-size: 0.9em; color: #007bff; text-decoration: none; }
     .loading { color: #888; font-size: 0.95em; padding: 12px; text-align: center; }
   </style>
 </head>
@@ -42,23 +41,22 @@ function renderAccordion(data, container) {
     const row = data[i];
     const title = row["뉴스 제목"] || "";
     if (title.includes("관련뉴스")) {
+      const groupTitle = title;
       const acc = document.createElement("button");
       acc.className = "accordion";
-      acc.textContent = `📣 ${title}`;
+      acc.textContent = `📣 ${groupTitle}`;
       const panel = document.createElement("div");
       panel.className = "panel";
       i++;
       while (i < data.length && (data[i]["뉴스 제목"] || "").trim() !== "") {
-        const r = data[i];
-        const t = r["뉴스 제목"];
-        const l = r["링크"];
-        const time = r["시간"];
-        if (t && l) {
-          const item = document.createElement("div");
-          item.className = "news-item";
-          item.innerHTML = `<div class="news-title">${t}</div><div class="news-time">🕒 ${time}</div><div class="news-link"><a href="${l}" target="_blank">👉 뉴스 보러가기</a></div>`;
-          panel.appendChild(item);
-        }
+        const news = data[i];
+        const item = document.createElement("div");
+        item.className = "news-card";
+        item.innerHTML = `
+          <div class="news-title">${news["뉴스 제목"]}</div>
+          <div class="news-time">🕒 ${news["시간"]}</div>
+          <div class="news-link"><a href="${news["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+        panel.appendChild(item);
         i++;
       }
       acc.onclick = () => {
@@ -73,83 +71,73 @@ function renderAccordion(data, container) {
   }
 }
 
-function renderHot(data, container) {
-  data.forEach(row => {
-    const title = row["대표 뉴스 제목"];
-    const link = row["최신 뉴스 링크"];
-    const latest = row["최신 뉴스 시간"];
-    const first = row["최초 뉴스 시간"];
-    const count = parseInt(row["관련뉴스 수"] || "0");
-    const mention = parseInt(row["언급 채널 수"] || "0");
+function renderHotCard(row, container) {
+  const count = parseInt(row["관련뉴스 수"] || "0");
+  const mention = parseInt(row["언급 채널 수"] || "0");
+  let highlightClass = "";
+  if (count >= 10 && mention >= 3) highlightClass = "highlight-both";
+  else if (count >= 10) highlightClass = "highlight-news";
+  else if (mention >= 3) highlightClass = "highlight-channel";
 
-    if (!title || !link) return;
-
-    let highlightClass = "";
-    if (count >= 10 && mention >= 3) highlightClass = "highlight-both";
-    else if (count >= 10) highlightClass = "highlight-news";
-    else if (mention >= 3) highlightClass = "highlight-channel";
-
-    const card = document.createElement("div");
-    card.className = `news-card ${highlightClass}`;
-    card.innerHTML = `
-      <div class="news-title">${title}</div>
-      <div class="news-time">🕒 최신: ${latest} / 최초: ${first}</div>
-      <div class="news-time">📡 관련뉴스 ${count || "-"}건 / 언급채널 ${mention || "-"}개</div>
-      <div class="news-link"><a href="${link}" target="_blank">👉 뉴스 보러가기</a></div>
-    `;
-    container.appendChild(card);
-  });
+  const card = document.createElement("div");
+  card.className = `news-card ${highlightClass}`;
+  card.innerHTML = `
+    <div class="news-title">${row["대표 뉴스 제목"]}</div>
+    <div class="news-time">🕒 최신: ${row["최신 뉴스 시간"]} / 최초: ${row["최초 뉴스 시간"]}</div>
+    <div class="news-time">📡 관련뉴스 ${count}건 / 언급채널 ${mention}개</div>
+    <div class="news-link"><a href="${row["최신 뉴스 링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+  container.appendChild(card);
 }
 
-function renderFlat(data, container) {
-  data.forEach(row => {
-    const title = row["뉴스 제목"];
-    const link = row["링크"];
-    const time = row["시간"];
-    if (!title || !link) return;
-    const item = document.createElement("div");
-    item.className = "news-item";
-    item.innerHTML = `<div class="news-title">${title}</div><div class="news-time">🕒 ${time}</div><div class="news-link"><a href="${link}" target="_blank">👉 뉴스 보러가기</a></div>`;
-    container.appendChild(item);
-  });
+function renderFlatNews(row, container) {
+  const item = document.createElement("div");
+  item.className = "news-card";
+  item.innerHTML = `
+    <div class="news-title">${row["뉴스 제목"]}</div>
+    <div class="news-time">🕒 ${row["시간"]}</div>
+    <div class="news-link"><a href="${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+  container.appendChild(item);
 }
 
 function loadSheet(gid, name, btn) {
   if (currentBtn) currentBtn.classList.remove("active");
   currentBtn = btn;
   btn.classList.add("active");
-
   document.getElementById("content").innerHTML = "<p class='loading'>⏳ 뉴스 데이터를 불러오는 중입니다...</p>";
-  fetch(`/sheet/${gid}`)
-    .then(res => res.json())
-    .then(data => {
-      const container = document.createElement("div");
-      container.innerHTML = `<div class="sheet-title">📌 ${name}</div>`;
+  fetch(`/sheet/${gid}`).then(res => res.json()).then(data => {
+    const container = document.createElement("div");
+    container.innerHTML = `<div class="sheet-title">📌 ${name}</div>`;
+    const content = document.getElementById("content");
+    content.innerHTML = "";
 
-      const isAccordion = data.some(r => (r["뉴스 제목"] || "").includes("관련뉴스"));
-      const isHot = name.includes("HOT");
+    const isAccordion = data.some(r => (r["뉴스 제목"] || "").includes("관련뉴스"));
+    const isHot = name.includes("HOT");
 
-      if (isAccordion) renderAccordion(data, container);
-      else if (isHot) renderHot(data, container);
-      else renderFlat(data, container);
-
-      document.getElementById("content").innerHTML = "";
-      document.getElementById("content").appendChild(container);
-    });
+    if (isAccordion) {
+      renderAccordion(data, container);
+    } else if (isHot) {
+      data.forEach(row => {
+        if (row["대표 뉴스 제목"] && row["최신 뉴스 링크"]) renderHotCard(row, container);
+      });
+    } else {
+      data.forEach(row => {
+        if (row["뉴스 제목"] && row["링크"]) renderFlatNews(row, container);
+      });
+    }
+    content.appendChild(container);
+  });
 }
 
-fetch("/sheets")
-  .then(res => res.json())
-  .then(sheets => {
-    const nav = document.getElementById("sheet-nav");
-    sheets.forEach((sheet, i) => {
-      const btn = document.createElement("button");
-      btn.textContent = sheet.name;
-      btn.onclick = () => loadSheet(sheet.gid, sheet.name, btn);
-      nav.appendChild(btn);
-      if (i === 0) loadSheet(sheet.gid, sheet.name, btn);
-    });
+fetch("/sheets").then(res => res.json()).then(sheets => {
+  const nav = document.getElementById("sheet-nav");
+  sheets.forEach((sheet, i) => {
+    const btn = document.createElement("button");
+    btn.textContent = sheet.name;
+    btn.onclick = () => loadSheet(sheet.gid, sheet.name, btn);
+    nav.appendChild(btn);
+    if (i === 0) loadSheet(sheet.gid, sheet.name, btn);
   });
+});
 </script>
 </body>
 </html>
