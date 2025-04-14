@@ -42,6 +42,52 @@
 <div id="content"><p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p></div>
 
 <script>
+
+function calculateImportanceScores(data) {
+  const scored = data.map(row => {
+    const count = parseInt(row["관련뉴스 수"] || "0");
+    const mention = parseInt(row["언급 채널 수"] || "0");
+    let score = count + mention * 2;
+    if (mention >= 5) {
+      score += (mention - 4) * 2;
+    }
+    return { ...row, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const total = scored.length;
+
+  return scored.map((row, index) => {
+    const ratio = (index + 1) / total;
+    let highlightClass = "";
+    if (ratio <= 0.10) highlightClass = "highlight-both";        // 🔴 매우 중요
+    else if (ratio <= 0.30) highlightClass = "highlight-news";   // 🟠 중요
+    else if (ratio <= 0.60) highlightClass = "highlight-channel";// 🟡 보통
+    return { ...row, highlightClass };
+  });
+}
+
+
+function getTimeDiffText(timeStr) {
+  const now = new Date();
+  const t = new Date(timeStr);
+  const diffMs = now - t;
+  const diffMin = Math.floor(diffMs / 60000);
+
+  if (diffMin < 1) return "방금 전";
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const hours = Math.floor(diffMin / 60);
+  return `${hours}시간 전`;
+}
+
+function highlightKeyword(text, keyword) {
+  if (!keyword) return text;
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const reg = new RegExp(`(${escaped})`, "gi");
+  return text.replace(reg, '<span class="highlight">$1</span>');
+}
+
+
 let currentBtn = null;
 let currentData = [];
 let activeFilter = null;
@@ -155,6 +201,20 @@ function renderFlatNews(row, container) {
   container.appendChild(item);
 }
 
+function renderSkeletons(container, count = 5) {
+  container.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const card = document.createElement("div");
+    card.className = "news-card";
+    card.style.opacity = "0.3";
+    card.innerHTML = `
+      <div class="news-title">▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒</div>
+      <div class="news-time">🕒 ▒▒▒▒▒▒▒▒▒</div>
+      <div class="news-link"><a>▒▒▒▒▒▒▒▒▒</a></div>`;
+    container.appendChild(card);
+  }
+}
+
 function renderContent(data, container, sheetName) {
   container.className = "fade-container";
   container.innerHTML = `<div class="sheet-title">📌 ${sheetName}</div>`;
@@ -203,52 +263,71 @@ function loadSheet(gid, name, btn, isRefresh = false) {
   const content = document.getElementById("content");
   content.classList.add("fade-out");
 
-  fetch(`/sheet/${gid}`).then(res => res.json()).then(data => {
-    const newTitles = data.map(r => r["뉴스 제목"]).join("|");
-    const oldTitles = currentData.map(r => r["뉴스 제목"]).join("|");
-    if (newTitles === oldTitles && isRefresh) {
-      content.classList.remove("fade-out");
-      return;
-    }
+  const tempContainer = document.createElement("div");
+  renderSkeletons(tempContainer);
+  setTimeout(() => {
+    content.innerHTML = "";
+    content.appendChild(tempContainer);
+    content.classList.remove("fade-out");
+  }, 150);
 
-    currentData = data;
-    const container = document.createElement("div");
-    renderContent(data, container, name);
+  fetch(`/sheet/${gid}`)
+    .then(res => res.json())
+    .then(data => {
+      const newTitles = data.map(r => r["뉴스 제목"]).join("|");
+      const oldTitles = currentData.map(r => r["뉴스 제목"]).join("|");
+      if (newTitles === oldTitles && isRefresh) return;
 
-    setTimeout(() => {
-      content.innerHTML = "";
-      content.appendChild(container);
+      currentData = data;
+      const container = document.createElement("div");
+      renderContent(data, container, name);
+
+      setTimeout(() => {
+        content.innerHTML = "";
+        content.appendChild(container);
+        content.classList.remove("fade-out");
+
+        if (activeFilter) {
+          const btn = document.querySelector(`.hot-filter button[data-type="${activeFilter}"]`);
+          if (btn) btn.click();
+        }
+
+      }, 300);
+    })
+    .catch(() => {
+      content.innerHTML = "<p class='loading'>❌ 데이터를 불러오는 데 실패했습니다. 인터넷 연결을 확인해 주세요.</p>";
       content.classList.remove("fade-out");
-    }, 300);
-  });
+    });
 }
 
-fetch("/sheets").then(res => res.json()).then(sheets => {
-  sheets.sort((a, b) => {
-    const d1 = extractDate(a.name);
-    const d2 = extractDate(b.name);
-    if (d1.getTime() !== d2.getTime()) return d2 - d1;
-    return getPriority(a.name) - getPriority(b.name);
-  });
+fetch("/sheets")
+  .then(res => res.json())
+  .then(sheets => {
+    sheets.sort((a, b) => {
+      const d1 = extractDate(a.name);
+      const d2 = extractDate(b.name);
+      if (d1.getTime() !== d2.getTime()) return d2 - d1;
+      return getPriority(a.name) - getPriority(b.name);
+    });
 
-  const nav = document.getElementById("sheet-nav");
-  sheets.forEach((sheet, i) => {
-    const btn = document.createElement("button");
-    btn.textContent = sheet.name;
-    btn.dataset.gid = sheet.gid;
-    btn.onclick = () => loadSheet(sheet.gid, sheet.name, btn);
-    nav.appendChild(btn);
-    if (i === 0) loadSheet(sheet.gid, sheet.name, btn);
-  });
+    const nav = document.getElementById("sheet-nav");
+    sheets.forEach((sheet, i) => {
+      const btn = document.createElement("button");
+      btn.textContent = sheet.name;
+      btn.dataset.gid = sheet.gid;
+      btn.onclick = () => loadSheet(sheet.gid, sheet.name, btn);
+      nav.appendChild(btn);
+      if (i === 0) loadSheet(sheet.gid, sheet.name, btn);
+    });
 
-  setInterval(() => {
-    if (currentBtn) {
-      const gid = currentBtn.dataset.gid;
-      const name = currentBtn.textContent;
-      loadSheet(gid, name, currentBtn, true);
-    }
-  }, 60000);
-});
+    setInterval(() => {
+      if (currentBtn) {
+        const gid = currentBtn.dataset.gid;
+        const name = currentBtn.textContent;
+        loadSheet(gid, name, currentBtn, true);
+      }
+    }, 60000);
+  });
 </script>
 </body>
 </html>
