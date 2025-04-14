@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -14,15 +13,17 @@
 
     .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
     .hot-filter { margin-bottom: 12px; text-align: center; }
-    .hot-filter button { margin: 0 6px; padding: 6px 14px; border-radius: 20px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 0.9em; }
+    .hot-filter button { margin: 0 6px; padding: 6px 14px; border-radius: 20px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 0.9em; transition: all 0.2s ease; }
     .hot-filter button.active { background: #007bff; color: #fff; border-color: #007bff; }
 
-    .news-card { background: #fff; padding: 16px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }
+    .news-card { background: #fff; padding: 16px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: opacity 0.3s ease; opacity: 1; }
+    .news-card.hide { display: none; opacity: 0; }
+
     .highlight-news { background: #fff7e6; }
     .highlight-channel { background: #ffe6cc; }
     .highlight-both { background: #ffe5e5; border: 2px solid #cc0000; }
 
-    .accordion { background: #fff; font-weight: bold; cursor: pointer; padding: 14px 16px; width: 100%; border: none; text-align: left; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 8px; transition: 0.3s; }
+    .accordion { font-size: 1.15em; font-weight: bold; cursor: pointer; padding: 16px 18px; width: 100%; border: none; text-align: left; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 8px; transition: 0.3s; }
     .accordion:hover, .accordion.active { background-color: #e4f0ff; }
     .panel { padding: 0 16px; background-color: white; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border-left: 3px solid #007bff; border-radius: 0 0 8px 8px; }
 
@@ -39,6 +40,7 @@
 
 <script>
 let currentBtn = null;
+let activeFilter = null;
 
 function renderAccordion(data, container) {
   let i = 0;
@@ -80,15 +82,36 @@ function renderHotFilter(container) {
   const filterBox = document.createElement("div");
   filterBox.className = "hot-filter";
   filterBox.innerHTML = `
+    <button data-type="all" class="active">⚫ 전체</button>
     <button data-type="both">🔴 베스트</button>
     <button data-type="news">🟠 확산중</button>
     <button data-type="channel">🟡 뉴스픽</button>
   `;
-  filterBox.querySelectorAll("button").forEach(btn => {
+
+  const buttons = filterBox.querySelectorAll("button");
+  const allBtn = filterBox.querySelector('[data-type="all"]');
+
+  buttons.forEach(btn => {
     btn.onclick = () => {
-      filterBox.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
       const type = btn.getAttribute("data-type");
+      if (type === "all") {
+        buttons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = null;
+        document.querySelectorAll(".news-card").forEach(c => c.style.display = "block");
+        return;
+      }
+      if (activeFilter === type) {
+        activeFilter = null;
+        btn.classList.remove("active");
+        allBtn.classList.add("active");
+        document.querySelectorAll(".news-card").forEach(c => c.style.display = "block");
+        return;
+      }
+      activeFilter = type;
+      buttons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
       document.querySelectorAll(".news-card").forEach(card => {
         card.style.display = "none";
         if (type === "both" && card.classList.contains("highlight-both")) card.style.display = "block";
