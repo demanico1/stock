@@ -41,7 +41,7 @@ function renderAccordion(data, container) {
   while (i < data.length) {
     const row = data[i];
     const title = row["뉴스 제목"] || "";
-    if (title.includes("관련뉴스") && title.includes("채널")) {
+    if (title.includes("관련뉴스")) {
       const acc = document.createElement("button");
       acc.className = "accordion";
       acc.textContent = `📣 ${title}`;
@@ -126,7 +126,7 @@ function loadSheet(gid, name, btn) {
       const container = document.createElement("div");
       container.innerHTML = `<div class="sheet-title">📌 ${name}</div>`;
 
-      const isAccordion = data.some(r => (r["뉴스 제목"] || "").includes("채널") && (r["뉴스 제목"] || "").includes("관련뉴스"));
+      const isAccordion = data.some(r => (r["뉴스 제목"] || "").includes("관련뉴스"));
       const isHot = name.includes("HOT");
 
       if (isAccordion) renderAccordion(data, container);
