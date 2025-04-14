@@ -10,251 +10,245 @@
     .sheet-nav { position: sticky; top: 0; background: #fff; padding: 10px 0; border-bottom: 1px solid #ddd; z-index: 999; overflow-x: auto; white-space: nowrap; }
     .sheet-nav button { margin: 0 6px; padding: 8px 12px; border-radius: 16px; border: 1px solid #ccc; background: #f9f9f9; cursor: pointer; font-size: 0.95em; display: inline-block; }
     .sheet-nav button.active { background: #007bff; color: white; border-color: #007bff; }
+
     .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
-    .hot-filter { margin: 12px 0; text-align: center; white-space: nowrap; overflow-x: auto; }
-    .hot-filter button { margin: 0 6px; padding: 6px 12px; border-radius: 20px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 0.9em; transition: all 0.2s ease; }
+    .hot-filter { margin-bottom: 12px; text-align: center; }
+    .hot-filter button { margin: 0 6px; padding: 6px 14px; border-radius: 20px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 0.9em; transition: all 0.2s ease; }
     .hot-filter button.active { background: #007bff; color: #fff; border-color: #007bff; }
-    .search-box { text-align: center; margin-bottom: 16px; }
-    .search-box input { padding: 8px 12px; font-size: 1em; width: 70%; max-width: 300px; border-radius: 8px; border: 1px solid #ccc; }
-    .search-box button { padding: 8px 14px; margin-left: 6px; font-size: 1em; border-radius: 8px; background: #007bff; color: white; border: none; cursor: pointer; }
-    .news-card { background: #fff; padding: 16px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: opacity 0.3s ease; }
-    .news-card.hide { display: none; }
-    .highlight-both { background: #ffe5e5; border: 2px solid #cc0000; }
+
+    .news-card { background: #fff; padding: 16px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: opacity 0.3s ease; opacity: 1; }
+    .news-card.hide { display: none; opacity: 0; }
+
     .highlight-news { background: #fff7e6; }
     .highlight-channel { background: #ffe6cc; }
-    .highlight { background-color: #fff176; font-weight: bold; padding: 0 2px; border-radius: 4px; }
-    .accordion { font-size: 1.1em; font-weight: bold; cursor: pointer; padding: 16px; width: 100%; border: none; text-align: left; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 10px; transition: background 0.3s; color: #111 !important; }
+    .highlight-both { background: #ffe5e5; border: 2px solid #cc0000; }
+
+    .accordion { font-size: 1.15em; font-weight: bold; cursor: pointer; padding: 16px 18px; width: 100%; border: none; text-align: left; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 8px; transition: 0.3s; }
     .accordion:hover, .accordion.active { background-color: #e4f0ff; }
-    .panel { padding: 0 16px; background: white; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border-left: 3px solid #007bff; border-radius: 0 0 8px 8px; }
-    .news-title { font-weight: bold; font-size: 1.1em; color: #111 !important; }
+    .panel { padding: 0 16px; background-color: white; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border-left: 3px solid #007bff; border-radius: 0 0 8px 8px; }
+
+    .news-title { font-weight: bold; font-size: 1.1em; color: #222; }
     .news-time { font-size: 0.9em; color: #666; margin-top: 6px; }
     .news-link a { font-size: 0.9em; color: #007bff; text-decoration: none; }
     .loading { color: #888; font-size: 0.95em; padding: 12px; text-align: center; }
+
     .fade-container { opacity: 1; transition: opacity 0.3s ease; }
     .fade-container.fade-out { opacity: 0; }
   </style>
 </head>
 <body>
-  <h1>디마니코 뉴스 트래커 (기능 전체 통합 최종버전)</h1>
-  <div class="search-box">
-    <input type="text" id="search-input" placeholder="🔍 키워드 검색..." />
-    <button onclick="runSearch()">검색</button>
-  </div>
-  <div class="hot-filter">
-    <button data-type="all" class="active" onclick="filterByType('all')">⚫ 전체</button>
-    <button data-type="both" onclick="filterByType('both')">🔴 매우 중요</button>
-    <button data-type="news" onclick="filterByType('news')">🟠 중요</button>
-    <button data-type="channel" onclick="filterByType('channel')">🟡 보통</button>
-  </div>
-  <div id="sheet-nav" class="sheet-nav"></div>
-  <div id="content"><p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p></div>
-  <script>
-    let currentData = [];
-let searchKeyword = "";
+<h1>디마니코 뉴스 트래커</h1>
+<div id="sheet-nav" class="sheet-nav"></div>
+<div id="content"><p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p></div>
 
-function runSearch() {
-  const input = document.getElementById("search-input");
-  searchKeyword = input.value.trim();
-  if (!currentData.length) return;
+<script>
+let currentBtn = null;
+let currentData = [];
+let activeFilter = null;
 
-  const isAccordion = currentData.some(r => (r["뉴스 제목"] || "").includes("관련뉴스"));
-  if (isAccordion) {
-    const flatNews = currentData.filter(row => row["뉴스 제목"] && !row["뉴스 제목"].includes("관련뉴스"));
-    renderSearchResult(flatNews);
-    return;
-  }
-  const filtered = currentData.filter(row =>
-    row["뉴스 제목"]?.includes(searchKeyword)
-  );
-  renderSearchResult(filtered);
-}
-
-function getTimeDiffText(timeStr) {
-  const now = new Date();
-  const t = new Date(timeStr);
-  const diffMs = now - t;
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return "방금 전";
-  if (diffMin < 60) return `${diffMin}분 전`;
-  const hours = Math.floor(diffMin / 60);
-  return `${hours}시간 전`;
-}
-
-function highlightKeyword(text, keyword) {
-  if (!keyword) return text;
-  const escaped = keyword.replace(/[.*+?^${}()|[\]\]/g, '\$&');
-  const reg = new RegExp(`(${escaped})`, "gi");
-  return text.replace(reg, '<span class="highlight">$1</span>');
-}
-
-function renderSearchResult(data) {
-  const content = document.getElementById("content");
-  content.innerHTML = "";
-  const summary = document.createElement("div");
-  summary.className = "news-card";
-  if (!data.length) {
-    summary.innerHTML = "<p class='loading'>❌ 일치하는 뉴스가 없습니다.</p>";
-  } else {
-    const times = data.map(r => new Date(r["시간"])).sort((a, b) => a - b);
-    const earliest = times[0];
-    const latest = times[times.length - 1];
-    const channels = new Set();
-    data.forEach(r => r["채널명"] && channels.add(r["채널명"]));
-    summary.innerHTML = `
-      <div class="news-title">🔍 검색 결과 요약</div>
-      <div class="news-time">최신 뉴스: ${latest.toLocaleTimeString()} (${getTimeDiffText(latest)})</div>
-      <div class="news-time">최초 뉴스: ${earliest.toLocaleTimeString()} (${getTimeDiffText(earliest)})</div>
-      <div class="news-time">총 ${data.length}건 / 채널 ${channels.size}개</div>
-    `;
-  }
-  content.appendChild(summary);
-
-  data.sort((a, b) => new Date(b["시간"]) - new Date(a["시간"]));
-  data.forEach(row => {
-    const card = document.createElement("div");
-    card.className = "news-card";
-    card.innerHTML = `
-      <div class="news-title">${highlightKeyword(row["뉴스 제목"], searchKeyword)}</div>
-      <div class="news-time">🕒 ${row["시간"]} (${getTimeDiffText(row["시간"] || "")})</div>
-      <div class="news-link"><a href="${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>
-    `;
-    content.appendChild(card);
-  });
-}
-  
-
-function loadSheetData() {
-  fetch("/sheets")
-    .then((res) => res.json())
-    .then((sheets) => {
-      const nav = document.getElementById("sheet-nav");
-      sheets.forEach((sheet, index) => {
-        const btn = document.createElement("button");
-        btn.textContent = sheet.name;
-        btn.onclick = () => loadSheet(sheet.gid);
-        btn.classList.add("active");
-        nav.appendChild(btn);
-        if (index === 0) loadSheet(sheet.gid);
-      });
-    });
-}
-
-function loadSheet(gid) {
-  const content = document.getElementById("content");
-  content.innerHTML = `<p class='loading'>⏳ 뉴스 데이터를 불러오는 중입니다...</p>`;
-
-  fetch(`/sheet/${gid}`)
-    .then((res) => res.json())
-    .then((data) => {
-      currentData = calculateImportanceScores(data);
-      renderContent(currentData);
-    })
-    .catch(() => {
-      content.innerHTML = `<p class='loading'>❌ 데이터를 불러오는 데 실패했습니다. 인터넷 연결을 확인해 주세요.</p>`;
-    });
-}
-
-function calculateImportanceScores(data) {
-  const scored = data.map((row) => {
-    const count = parseInt(row["관련뉴스 수"] || "0");
-    const mention = parseInt(row["언급 채널 수"] || "0");
-    let score = count + mention * 2;
-    if (mention >= 5) score += (mention - 4) * 2;
-    return { ...row, score };
-  });
-
-  scored.sort((a, b) => b.score - a.score);
-  const total = scored.length;
-
-  return scored.map((row, index) => {
-    const ratio = (index + 1) / total;
-    let highlightClass = "";
-    if (ratio <= 0.1) highlightClass = "highlight-both";
-    else if (ratio <= 0.3) highlightClass = "highlight-news";
-    else if (ratio <= 0.6) highlightClass = "highlight-channel";
-    return { ...row, highlightClass };
-  });
-}
-
-function renderContent(data) {
-  const content = document.getElementById("content");
-  content.innerHTML = "";
-
-  const isAccordion = data.some(r => (r["뉴스 제목"] || "").includes("관련뉴스"));
-  if (!isAccordion) {
-    data.forEach((row) => {
-      const card = document.createElement("div");
-      card.className = `news-card ${row.highlightClass}`;
-      card.innerHTML = `
-        <div class="news-title">${row["뉴스 제목"]}</div>
-        <div class="news-time">🕒 ${row["시간"]} (${getTimeDiffText(row["시간"])})</div>
-        <div class="news-time">📡 관련뉴스 ${row["관련뉴스 수"] || 0}건 / 언급채널 ${row["언급 채널 수"] || 0}개</div>
-        <div class="news-link"><a href="${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>
-      `;
-      content.appendChild(card);
-    });
-  } else {
-    let i = 0;
-    while (i < data.length) {
-      const row = data[i];
-      const title = row["뉴스 제목"] || "";
-      if (title.includes("관련뉴스")) {
-        const acc = document.createElement("button");
-        acc.className = `accordion ${row.highlightClass}`;
-        const count = parseInt(row["관련뉴스 수"] || "0");
-        const mention = parseInt(row["언급 채널 수"] || "0");
-        acc.textContent = `${title}  ⏱ ${getTimeDiffText(row["시간"])}  |  📡 ${count}건 / ${mention}채널`;
-
-        const panel = document.createElement("div");
-        panel.className = "panel";
-
-        i++;
-        while (i < data.length && (data[i]["뉴스 제목"] || "").trim() !== "") {
-          const news = data[i];
-          const item = document.createElement("div");
-          item.className = "news-card";
-          item.innerHTML = `
-            <div class="news-title">${news["뉴스 제목"]}</div>
-            <div class="news-time">🕒 ${news["시간"]}</div>
-            <div class="news-link"><a href="${news["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
-          panel.appendChild(item);
-          i++;
-        }
-
-        acc.onclick = () => {
-          acc.classList.toggle("active");
-          panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
-        };
-        content.appendChild(acc);
-        content.appendChild(panel);
-      } else {
+function renderAccordion(data, container) {
+  let i = 0;
+  while (i < data.length) {
+    const row = data[i];
+    const title = row["뉴스 제목"] || "";
+    if (title.includes("관련뉴스")) {
+      const groupTitle = title;
+      const acc = document.createElement("button");
+      acc.className = "accordion";
+      acc.textContent = `📣 ${groupTitle}`;
+      const panel = document.createElement("div");
+      panel.className = "panel";
+      i++;
+      while (i < data.length && (data[i]["뉴스 제목"] || "").trim() !== "") {
+        const news = data[i];
+        const item = document.createElement("div");
+        item.className = "news-card";
+        item.innerHTML = `
+          <div class="news-title">${news["뉴스 제목"]}</div>
+          <div class="news-time">🕒 ${news["시간"]}</div>
+          <div class="news-link"><a href="${news["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+        panel.appendChild(item);
         i++;
       }
+      acc.onclick = () => {
+        acc.classList.toggle("active");
+        panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
+      };
+      container.appendChild(acc);
+      container.appendChild(panel);
+    } else {
+      i++;
     }
   }
-}`;
-    card.innerHTML = `
-      <div class="news-title">${row["뉴스 제목"]}</div>
-      <div class="news-time">🕒 ${row["시간"]} (${getTimeDiffText(row["시간"])})</div>
-      <div class="news-time">📡 관련뉴스 ${row["관련뉴스 수"] || 0}건 / 언급채널 ${row["언급 채널 수"] || 0}개</div>
-      <div class="news-link"><a href="${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>
-    `;
-    content.appendChild(card);
+}
+
+function renderHotFilter(container) {
+  const filterBox = document.createElement("div");
+  filterBox.className = "hot-filter";
+  filterBox.innerHTML = `
+    <button data-type="all" class="active">⚫ 전체</button>
+    <button data-type="both">🔴 베스트</button>
+    <button data-type="news">🟠 확산중</button>
+    <button data-type="channel">🟡 뉴스픽</button>
+  `;
+
+  const buttons = filterBox.querySelectorAll("button");
+  const allBtn = filterBox.querySelector('[data-type="all"]');
+
+  buttons.forEach(btn => {
+    btn.onclick = () => {
+      const type = btn.getAttribute("data-type");
+      if (type === "all") {
+        buttons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeFilter = null;
+        document.querySelectorAll(".news-card").forEach(c => c.style.display = "block");
+        return;
+      }
+      if (activeFilter === type) {
+        activeFilter = null;
+        btn.classList.remove("active");
+        allBtn.classList.add("active");
+        document.querySelectorAll(".news-card").forEach(c => c.style.display = "block");
+        return;
+      }
+      activeFilter = type;
+      buttons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      document.querySelectorAll(".news-card").forEach(card => {
+        card.style.display = "none";
+        if (type === "both" && card.classList.contains("highlight-both")) card.style.display = "block";
+        else if (type === "news" && card.classList.contains("highlight-news")) card.style.display = "block";
+        else if (type === "channel" && card.classList.contains("highlight-channel")) card.style.display = "block";
+      });
+    };
+  });
+  container.appendChild(filterBox);
+}
+
+function renderHotCard(row, container) {
+  const count = parseInt(row["관련뉴스 수"] || "0");
+  const mention = parseInt(row["언급 채널 수"] || "0");
+  let highlightClass = "";
+  if (count >= 10 && mention >= 3) highlightClass = "highlight-both";
+  else if (count >= 10) highlightClass = "highlight-news";
+  else if (mention >= 3) highlightClass = "highlight-channel";
+
+  const card = document.createElement("div");
+  card.className = `news-card ${highlightClass}`;
+  card.innerHTML = `
+    <div class="news-title">${row["대표 뉴스 제목"]}</div>
+    <div class="news-time">🕒 최신: ${row["최신 뉴스 시간"]} / 최초: ${row["최초 뉴스 시간"]}</div>
+    <div class="news-time">📡 관련뉴스 ${count}건 / 언급채널 ${mention}개</div>
+    <div class="news-link"><a href="${row["최신 뉴스 링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+  container.appendChild(card);
+}
+
+function renderFlatNews(row, container) {
+  const item = document.createElement("div");
+  item.className = "news-card";
+  item.innerHTML = `
+    <div class="news-title">${row["뉴스 제목"]}</div>
+    <div class="news-time">🕒 ${row["시간"]}</div>
+    <div class="news-link"><a href="${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+  container.appendChild(item);
+}
+
+function renderContent(data, container, sheetName) {
+  container.className = "fade-container";
+  container.innerHTML = `<div class="sheet-title">📌 ${sheetName}</div>`;
+  const isAccordion = data.some(r => (r["뉴스 제목"] || "").includes("관련뉴스"));
+  const isHot = sheetName.includes("HOT");
+
+  if (isAccordion) {
+    renderAccordion(data, container);
+  } else if (isHot) {
+    renderHotFilter(container);
+    data.forEach(row => {
+      if (row["대표 뉴스 제목"] && row["최신 뉴스 링크"]) renderHotCard(row, container);
+    });
+  } else {
+    data.forEach(row => {
+      if (row["뉴스 제목"] && row["링크"]) renderFlatNews(row, container);
+    });
+  }
+}
+
+function extractDate(sheetName) {
+  const match = sheetName.match(/\d{2}\.\d{2}/);
+  if (match) {
+    const today = new Date();
+    const year = today.getFullYear();
+    return new Date(`${year}-${match[0].replace('.', '-')}`);
+  }
+  return new Date(0);
+}
+
+function getPriority(name) {
+  if (name.includes("HOT")) return 0;
+  if (name.includes("이슈")) return 1;
+  if (name.includes("채널")) return 2;
+  if (name.includes("DB")) return 3;
+  return 4;
+}
+
+function loadSheet(gid, name, btn, isRefresh = false) {
+  if (!isRefresh) {
+    if (currentBtn) currentBtn.classList.remove("active");
+    currentBtn = btn;
+    btn.classList.add("active");
+  }
+
+  const content = document.getElementById("content");
+  content.classList.add("fade-out");
+
+  fetch(`/sheet/${gid}`).then(res => res.json()).then(data => {
+    const newTitles = data.map(r => r["뉴스 제목"]).join("|");
+    const oldTitles = currentData.map(r => r["뉴스 제목"]).join("|");
+    if (newTitles === oldTitles && isRefresh) {
+      content.classList.remove("fade-out");
+      return;
+    }
+
+    currentData = data;
+    const container = document.createElement("div");
+    renderContent(data, container, name);
+
+    setTimeout(() => {
+      content.innerHTML = "";
+      content.appendChild(container);
+      content.classList.remove("fade-out");
+    }, 300);
   });
 }
 
-loadSheetData();
+fetch("/sheets").then(res => res.json()).then(sheets => {
+  sheets.sort((a, b) => {
+    const d1 = extractDate(a.name);
+    const d2 = extractDate(b.name);
+    if (d1.getTime() !== d2.getTime()) return d2 - d1;
+    return getPriority(a.name) - getPriority(b.name);
+  });
 
-// 자동 새로고침 (60초마다 현재 시트 다시 로드)
-setInterval(() => {
-  const active = document.querySelector(".sheet-nav button.active");
-  if (active) {
-    active.click();
-    document.getElementById('search-input').value = searchKeyword;
-    if (searchKeyword) runSearch();
-    if (activeFilter) filterByType(activeFilter);
-  }
-}, 60000);
+  const nav = document.getElementById("sheet-nav");
+  sheets.forEach((sheet, i) => {
+    const btn = document.createElement("button");
+    btn.textContent = sheet.name;
+    btn.dataset.gid = sheet.gid;
+    btn.onclick = () => loadSheet(sheet.gid, sheet.name, btn);
+    nav.appendChild(btn);
+    if (i === 0) loadSheet(sheet.gid, sheet.name, btn);
+  });
+
+  setInterval(() => {
+    if (currentBtn) {
+      const gid = currentBtn.dataset.gid;
+      const name = currentBtn.textContent;
+      loadSheet(gid, name, currentBtn, true);
+    }
+  }, 60000);
+});
 </script>
 </body>
 </html>
