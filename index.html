@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -12,6 +13,10 @@
     .sheet-nav button.active { background: #007bff; color: white; border-color: #007bff; }
 
     .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
+    .hot-filter { margin-bottom: 12px; text-align: center; }
+    .hot-filter button { margin: 0 6px; padding: 6px 14px; border-radius: 20px; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 0.9em; }
+    .hot-filter button.active { background: #007bff; color: #fff; border-color: #007bff; }
+
     .news-card { background: #fff; padding: 16px; margin-bottom: 12px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.3s; }
     .highlight-news { background: #fff7e6; }
     .highlight-channel { background: #ffe6cc; }
@@ -71,6 +76,30 @@ function renderAccordion(data, container) {
   }
 }
 
+function renderHotFilter(container) {
+  const filterBox = document.createElement("div");
+  filterBox.className = "hot-filter";
+  filterBox.innerHTML = `
+    <button data-type="both">🔴 베스트</button>
+    <button data-type="news">🟠 확산중</button>
+    <button data-type="channel">🟡 뉴스픽</button>
+  `;
+  filterBox.querySelectorAll("button").forEach(btn => {
+    btn.onclick = () => {
+      filterBox.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const type = btn.getAttribute("data-type");
+      document.querySelectorAll(".news-card").forEach(card => {
+        card.style.display = "none";
+        if (type === "both" && card.classList.contains("highlight-both")) card.style.display = "block";
+        else if (type === "news" && card.classList.contains("highlight-news")) card.style.display = "block";
+        else if (type === "channel" && card.classList.contains("highlight-channel")) card.style.display = "block";
+      });
+    };
+  });
+  container.appendChild(filterBox);
+}
+
 function renderHotCard(row, container) {
   const count = parseInt(row["관련뉴스 수"] || "0");
   const mention = parseInt(row["언급 채널 수"] || "0");
@@ -100,13 +129,13 @@ function renderFlatNews(row, container) {
 }
 
 function extractDate(sheetName) {
-  const match = sheetName.match(/\d{2}\.\d{2}/); // 예: "04.14"
+  const match = sheetName.match(/\d{2}\.\d{2}/);
   if (match) {
     const today = new Date();
-    const year = today.getFullYear(); // 현재 연도 사용
+    const year = today.getFullYear();
     return new Date(`${year}-${match[0].replace('.', '-')}`);
   }
-  return new Date(0); // 날짜 없으면 오래된 날짜
+  return new Date(0);
 }
 
 function getPriority(name) {
@@ -134,6 +163,7 @@ function loadSheet(gid, name, btn) {
     if (isAccordion) {
       renderAccordion(data, container);
     } else if (isHot) {
+      renderHotFilter(container);
       data.forEach(row => {
         if (row["대표 뉴스 제목"] && row["최신 뉴스 링크"]) renderHotCard(row, container);
       });
