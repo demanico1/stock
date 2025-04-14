@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>디마니코 뉴스 트래커</title>
+  <title>⼚디마니코 뉴스 트랙커</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { font-family: 'Arial', sans-serif; background: #f4f6f9; margin: 0; padding: 16px; }
@@ -34,13 +34,15 @@
   </style>
 </head>
 <body>
-<h1>디마니코 뉴스 트래커</h1>
+<h1>디마니코 뉴스 트랙커</h1>
 <div id="sheet-nav" class="sheet-nav"></div>
 <div id="content"><p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p></div>
 
 <script>
 let currentBtn = null;
 let activeFilter = null;
+let previousMap = new Map();
+let refreshInterval = null;
 
 function renderAccordion(data, container) {
   let i = 0;
@@ -59,11 +61,13 @@ function renderAccordion(data, container) {
         const news = data[i];
         const item = document.createElement("div");
         item.className = "news-card";
+        item.setAttribute("data-title", news["뉴스 제목"]);
         item.innerHTML = `
           <div class="news-title">${news["뉴스 제목"]}</div>
           <div class="news-time">🕒 ${news["시간"]}</div>
           <div class="news-link"><a href="${news["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
         panel.appendChild(item);
+        previousMap.set(news["뉴스 제목"], item);
         i++;
       }
       acc.onclick = () => {
@@ -87,7 +91,6 @@ function renderHotFilter(container) {
     <button data-type="news">🟠 확산중</button>
     <button data-type="channel">🟡 뉴스픽</button>
   `;
-
   const buttons = filterBox.querySelectorAll("button");
   const allBtn = filterBox.querySelector('[data-type="all"]');
 
@@ -111,7 +114,6 @@ function renderHotFilter(container) {
       activeFilter = type;
       buttons.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
-
       document.querySelectorAll(".news-card").forEach(card => {
         card.style.display = "none";
         if (type === "both" && card.classList.contains("highlight-both")) card.style.display = "block";
@@ -123,32 +125,22 @@ function renderHotFilter(container) {
   container.appendChild(filterBox);
 }
 
-function renderHotCard(row, container) {
-  const count = parseInt(row["관련뉴스 수"] || "0");
-  const mention = parseInt(row["언급 채널 수"] || "0");
-  let highlightClass = "";
-  if (count >= 10 && mention >= 3) highlightClass = "highlight-both";
-  else if (count >= 10) highlightClass = "highlight-news";
-  else if (mention >= 3) highlightClass = "highlight-channel";
-
-  const card = document.createElement("div");
-  card.className = `news-card ${highlightClass}`;
-  card.innerHTML = `
-    <div class="news-title">${row["대표 뉴스 제목"]}</div>
-    <div class="news-time">🕒 최신: ${row["최신 뉴스 시간"]} / 최초: ${row["최초 뉴스 시간"]}</div>
-    <div class="news-time">📡 관련뉴스 ${count}건 / 언급채널 ${mention}개</div>
-    <div class="news-link"><a href="${row["최신 뉴스 링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
-  container.appendChild(card);
-}
-
-function renderFlatNews(row, container) {
-  const item = document.createElement("div");
-  item.className = "news-card";
-  item.innerHTML = `
-    <div class="news-title">${row["뉴스 제목"]}</div>
-    <div class="news-time">🕒 ${row["시간"]}</div>
-    <div class="news-link"><a href="${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
-  container.appendChild(item);
+function refreshSheet(gid, renderFunc) {
+  fetch(`/sheet/${gid}`).then(res => res.json()).then(data => {
+    const currentTitles = new Set();
+    data.forEach(row => {
+      const title = row["대표 뉴스 제목"]?.trim() || row["뉴스 제목"]?.trim();
+      if (!title) return;
+      currentTitles.add(title);
+      if (!previousMap.has(title)) renderFunc(row);
+    });
+    previousMap.forEach((el, title) => {
+      if (!currentTitles.has(title)) {
+        el.remove();
+        previousMap.delete(title);
+      }
+    });
+  });
 }
 
 function extractDate(sheetName) {
@@ -170,6 +162,8 @@ function getPriority(name) {
 }
 
 function loadSheet(gid, name, btn) {
+  if (refreshInterval) clearInterval(refreshInterval);
+  previousMap.clear();
   if (currentBtn) currentBtn.classList.remove("active");
   currentBtn = btn;
   btn.classList.add("active");
@@ -179,23 +173,72 @@ function loadSheet(gid, name, btn) {
     container.innerHTML = `<div class="sheet-title">📌 ${name}</div>`;
     const content = document.getElementById("content");
     content.innerHTML = "";
+    content.appendChild(container);
 
+    let renderFunc;
     const isAccordion = data.some(r => (r["뉴스 제목"] || "").includes("관련뉴스"));
     const isHot = name.includes("HOT");
 
     if (isAccordion) {
+      renderFunc = (row) => {
+        const title = row["뉴스 제목"];
+        if (!title || title.includes("관련뉴스")) return;
+        const item = document.createElement("div");
+        item.className = "news-card";
+        item.setAttribute("data-title", title);
+        item.innerHTML = `
+          <div class="news-title">${title}</div>
+          <div class="news-time">🕒 ${row["시간"]}</div>
+          <div class="news-link"><a href="${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+        container.prepend(item);
+        previousMap.set(title, item);
+      };
       renderAccordion(data, container);
     } else if (isHot) {
       renderHotFilter(container);
+      renderFunc = (row) => {
+        const title = row["대표 뉴스 제목"];
+        if (!title || !row["최신 뉴스 링크"]) return;
+        const count = parseInt(row["관련뉴스 수"] || "0");
+        const mention = parseInt(row["언급 채널 수"] || "0");
+        let highlightClass = "";
+        if (count >= 10 && mention >= 3) highlightClass = "highlight-both";
+        else if (count >= 10) highlightClass = "highlight-news";
+        else if (mention >= 3) highlightClass = "highlight-channel";
+        const card = document.createElement("div");
+        card.className = `news-card ${highlightClass}`;
+        card.setAttribute("data-title", title);
+        card.innerHTML = `
+          <div class="news-title">${title}</div>
+          <div class="news-time">🕒 최신: ${row["최신 뉴스 시간"]} / 최초: ${row["최초 뉴스 시간"]}</div>
+          <div class="news-time">📁 관련뉴스 ${count}건 / 언급채널 ${mention}개</div>
+          <div class="news-link"><a href="${row["최신 뉴스 링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+        container.prepend(card);
+        previousMap.set(title, card);
+      };
       data.forEach(row => {
-        if (row["대표 뉴스 제목"] && row["최신 뉴스 링크"]) renderHotCard(row, container);
+        if (row["대표 뉴스 제목"] && row["최신 뉴스 링크"]) renderFunc(row);
       });
     } else {
+      renderFunc = (row) => {
+        const title = row["뉴스 제목"];
+        if (!title || !row["링크"]) return;
+        const item = document.createElement("div");
+        item.className = "news-card";
+        item.setAttribute("data-title", title);
+        item.innerHTML = `
+          <div class="news-title">${title}</div>
+          <div class="news-time">🕒 ${row["시간"]}</div>
+          <div class="news-link"><a href="${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>`;
+        container.prepend(item);
+        previousMap.set(title, item);
+      };
       data.forEach(row => {
-        if (row["뉴스 제목"] && row["링크"]) renderFlatNews(row, container);
+        if (row["뉴스 제목"] && row["링크"]) renderFunc(row);
       });
     }
-    content.appendChild(container);
+
+    refreshInterval = setInterval(() => refreshSheet(gid, renderFunc), 60000);
   });
 }
 
