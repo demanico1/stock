@@ -100,11 +100,13 @@ function renderFlatNews(row, container) {
 }
 
 function extractDate(sheetName) {
-  const match = sheetName.match(/\d{2}\.\d{2}/); // e.g. 04.17
+  const match = sheetName.match(/\d{2}\.\d{2}/); // 예: "04.14"
   if (match) {
-    return new Date(`20${match[0].replace('.', '-')}`);
+    const today = new Date();
+    const year = today.getFullYear(); // 현재 연도 사용
+    return new Date(`${year}-${match[0].replace('.', '-')}`);
   }
-  return new Date(0); // 오래된 날짜 기본값
+  return new Date(0); // 날짜 없으면 오래된 날짜
 }
 
 function getPriority(name) {
@@ -145,7 +147,6 @@ function loadSheet(gid, name, btn) {
 }
 
 fetch("/sheets").then(res => res.json()).then(sheets => {
-  // 날짜 최신순 + HOT > 이슈 > 채널 > DB 정렬
   sheets.sort((a, b) => {
     const d1 = extractDate(a.name);
     const d2 = extractDate(b.name);
