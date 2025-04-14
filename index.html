@@ -99,6 +99,22 @@ function renderFlatNews(row, container) {
   container.appendChild(item);
 }
 
+function extractDate(sheetName) {
+  const match = sheetName.match(/\d{2}\.\d{2}/); // e.g. 04.17
+  if (match) {
+    return new Date(`20${match[0].replace('.', '-')}`);
+  }
+  return new Date(0); // default to old date
+}
+
+function getPriority(name) {
+  if (name.includes("HOT")) return 0;
+  if (name.includes("이슈")) return 1;
+  if (name.includes("채널")) return 2;
+  if (name.includes("DB")) return 3;
+  return 4;
+}
+
 function loadSheet(gid, name, btn) {
   if (currentBtn) currentBtn.classList.remove("active");
   currentBtn = btn;
@@ -129,6 +145,14 @@ function loadSheet(gid, name, btn) {
 }
 
 fetch("/sheets").then(res => res.json()).then(sheets => {
+  // 📌 정렬 추가: 날짜 최신순 + HOT → 이슈 → 채널 → DB
+  sheets.sort((a, b) => {
+    const d1 = extractDate(a.name);
+    const d2 = extractDate(b.name);
+    if (d1.getTime() !== d2.getTime()) return d2 - d1;
+    return getPriority(a.name) - getPriority(b.name);
+  });
+
   const nav = document.getElementById("sheet-nav");
   sheets.forEach((sheet, i) => {
     const btn = document.createElement("button");
