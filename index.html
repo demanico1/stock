@@ -104,7 +104,7 @@ function extractDate(sheetName) {
   if (match) {
     return new Date(`20${match[0].replace('.', '-')}`);
   }
-  return new Date(0); // default to old date
+  return new Date(0); // 오래된 날짜 기본값
 }
 
 function getPriority(name) {
@@ -145,7 +145,7 @@ function loadSheet(gid, name, btn) {
 }
 
 fetch("/sheets").then(res => res.json()).then(sheets => {
-  // 📌 정렬 추가: 날짜 최신순 + HOT → 이슈 → 채널 → DB
+  // 날짜 최신순 + HOT > 이슈 > 채널 > DB 정렬
   sheets.sort((a, b) => {
     const d1 = extractDate(a.name);
     const d2 = extractDate(b.name);
