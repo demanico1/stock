@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>디마니코 뉴스 트래커</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   디마니코 뉴스 트래커
+  </title>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <style>
-    body { font-family: 'Arial', sans-serif; background: #f4f6f9; margin: 0; padding: 16px; }
+   body { font-family: 'Arial', sans-serif; background: #f4f6f9; margin: 0; padding: 16px; }
     h1 { text-align: center; color: #222; }
     .sheet-nav { position: sticky; top: 0; background: #fff; padding: 10px 0; border-bottom: 1px solid #ddd; z-index: 999; overflow-x: auto; white-space: nowrap; }
     .sheet-nav button { margin: 0 6px; padding: 8px 12px; border-radius: 16px; border: 1px solid #ccc; background: #f9f9f9; cursor: pointer; font-size: 0.95em; display: inline-block; }
@@ -34,15 +36,173 @@
 
     .fade-container { opacity: 1; transition: opacity 0.3s ease; }
     .fade-container.fade-out { opacity: 0; }
-  </style>
-</head>
-<body>
-<h1>디마니코 뉴스 트래커</h1>
-<div id="sheet-nav" class="sheet-nav"></div>
-<div id="content"><p class="loading">⏳ 뉴스 데이터를 불러오는 중입니다...</p></div>
+  
+<style>
+  .hot-filter {
+    margin: 12px 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  .hot-filter button {
+    margin: 0 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+  }
+  .hot-filter button.active {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+  }
 
-<script>
-let currentBtn = null;
+  .news-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #111 !important;
+  }
+
+  .news-time {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 6px;
+  }
+
+  .search-box {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .search-box input {
+    padding: 8px 12px;
+    font-size: 1em;
+    width: 70%;
+    max-width: 300px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+  .search-box button {
+    padding: 8px 14px;
+    margin-left: 6px;
+    font-size: 1em;
+    border-radius: 8px;
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+
+  .highlight {
+    background-color: #fff176;
+    font-weight: bold;
+    padding: 0 2px;
+    border-radius: 4px;
+  }
+
+  .highlight-both {
+    background: #ffe5e5;
+    border: 2px solid #cc0000;
+  }
+  .highlight-news {
+    background: #fff7e6;
+  }
+  .highlight-channel {
+    background: #ffe6cc;
+  }
+
+<style>
+  .hot-filter {
+    margin: 12px 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  .hot-filter button {
+    margin: 0 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+  }
+  .hot-filter button.active {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+  }
+
+  .news-title {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #111 !important;
+  }
+
+  .news-time {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 6px;
+  }
+
+  .search-box {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .search-box input {
+    padding: 8px 12px;
+    font-size: 1em;
+    width: 70%;
+    max-width: 300px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+  .search-box button {
+    padding: 8px 14px;
+    margin-left: 6px;
+    font-size: 1em;
+    border-radius: 8px;
+    background: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+
+  .highlight {
+    background-color: #fff176;
+    font-weight: bold;
+    padding: 0 2px;
+    border-radius: 4px;
+  }
+
+  .highlight-both {
+    background: #ffe5e5;
+    border: 2px solid #cc0000;
+  }
+  .highlight-news {
+    background: #fff7e6;
+  }
+  .highlight-channel {
+    background: #ffe6cc;
+  }
+  </style>
+ </head>
+ <body>
+  <h1>
+   디마니코 뉴스 트래커
+  </h1>
+  <div class="sheet-nav" id="sheet-nav">
+  </div>
+  <div id="content">
+   <p class="loading">
+    ⏳ 뉴스 데이터를 불러오는 중입니다...
+   </p>
+  </div>
+  <script>
+   let currentBtn = null;
 let currentData = [];
 let activeFilter = null;
 
@@ -249,6 +409,164 @@ fetch("/sheets").then(res => res.json()).then(sheets => {
     }
   }, 60000);
 });
-</script>
-</body>
+  </script>
+  <script>
+   let searchKeyword = "";
+let activeFilter = null;
+
+function highlightKeyword(text, keyword) {
+  if (!keyword) return text;
+  const regex = new RegExp(\`(\${keyword})\`, 'gi');
+  return text.replace(regex, '<span class="highlight">$1</span>');
+}
+
+function getTimeDiffText(timeStr) {
+  const now = new Date();
+  const time = new Date(timeStr);
+  const diff = Math.floor((now - time) / 60000); // 분 단위
+  if (isNaN(diff)) return "";
+  if (diff < 1) return "방금 전";
+  if (diff < 60) return \`\${diff}분 전\`;
+  const h = Math.floor(diff / 60);
+  if (h < 24) return \`\${h}시간 전\`;
+  const d = Math.floor(h / 24);
+  return \`\${d}일 전\`;
+}
+
+function runSearch() {
+  const input = document.getElementById("search-input");
+  searchKeyword = input.value.trim();
+  if (!searchKeyword) {
+    location.reload();
+    return;
+  }
+  const filtered = currentData.filter(r =>
+    r["뉴스 제목"] && r["뉴스 제목"].toLowerCase().includes(searchKeyword.toLowerCase())
+  );
+  renderSearchResult(filtered);
+}
+
+function renderSearchSummary(data) {
+  const summary = document.createElement("div");
+  summary.className = "news-card";
+  if (!data.length) {
+    summary.innerHTML = "<p class='loading'>❌ 일치하는 뉴스가 없습니다.</p>";
+  } else {
+    const times = data.map(r => new Date(r["시간"])).sort((a, b) => a - b);
+    const earliest = times[0];
+    const latest = times[times.length - 1];
+    const channels = new Set();
+    data.forEach(r => r["채널명"] && channels.add(r["채널명"]));
+    summary.innerHTML = \`
+      <div class="news-title">🔍 검색 결과 요약</div>
+      <div class="news-time">최신 뉴스: \${latest.toLocaleTimeString()} (\${getTimeDiffText(latest)})</div>
+      <div class="news-time">최초 뉴스: \${earliest.toLocaleTimeString()} (\${getTimeDiffText(earliest)})</div>
+      <div class="news-time">총 \${data.length}건 / 채널 \${channels.size}개</div>
+    \`;
+  }
+  return summary;
+}
+
+function renderSearchResult(data) {
+  const content = document.getElementById("content");
+  content.innerHTML = "";
+  const summary = renderSearchSummary(data);
+  content.appendChild(summary);
+  data.sort((a, b) => new Date(b["시간"]) - new Date(a["시간"]));
+  data.forEach(row => {
+    const card = document.createElement("div");
+    card.className = "news-card";
+    card.innerHTML = \`
+      <div class="news-title">\${highlightKeyword(row["뉴스 제목"], searchKeyword)}</div>
+      <div class="news-time">🕒 \${row["시간"]} (\${getTimeDiffText(row["시간"] || "")})</div>
+      <div class="news-link"><a href="\${row["링크"]}" target="_blank">👉 뉴스 보러가기</a></div>
+    \`;
+    content.appendChild(card);
+  });
+}
+
+function showErrorMessage() {
+  const content = document.getElementById("content");
+  content.innerHTML = "<p class='loading'>❌ 데이터를 불러오는 데 실패했습니다. 인터넷 연결을 확인해 주세요.</p>";
+}
+
+function renderSkeletons(container, count = 5) {
+  container.innerHTML = "";
+  for (let i = 0; i < count; i++) {
+    const card = document.createElement("div");
+    card.className = "news-card";
+    card.style.opacity = "0.3";
+    card.innerHTML = \`
+      <div class="news-title">▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒</div>
+      <div class="news-time">🕒 ▒▒▒▒▒▒▒▒▒</div>
+      <div class="news-link"><a>▒▒▒▒▒▒▒▒▒</a></div>\`;
+    container.appendChild(card);
+  }
+}
+
+function filterByType(type) {
+  activeFilter = type === "all" ? null : type;
+  document.querySelectorAll(".hot-filter button").forEach(btn => btn.classList.remove("active"));
+  const activeBtn = document.querySelector(\`.hot-filter button[data-type='\${type}']\`);
+  if (activeBtn) activeBtn.classList.add("active");
+
+  document.querySelectorAll(".news-card, .accordion").forEach(card => {
+    const show = !activeFilter || card.classList.contains(\`highlight-\${activeFilter}\`);
+    card.style.display = show ? "block" : "none";
+    const panel = card.nextElementSibling;
+    if (panel && panel.classList.contains("panel")) {
+      panel.style.display = show ? "block" : "none";
+    }
+  });
+}
+
+setInterval(() => {
+  const active = document.querySelector(".sheet-nav button.active");
+  if (active) {
+    active.click();
+    document.getElementById("search-input").value = searchKeyword;
+    if (searchKeyword) runSearch();
+    if (activeFilter) filterByType(activeFilter);
+  }
+}, 60000);
+  </script>
+  <script>
+   function updateAccordionTitles() {
+  const accordions = document.querySelectorAll(".accordion");
+  accordions.forEach(acc => {
+    const panel = acc.nextElementSibling;
+    if (!panel) return;
+
+    const cards = panel.querySelectorAll(".news-card");
+    let earliest = null, latest = null;
+    const channels = new Set();
+
+    cards.forEach(card => {
+      const timeText = card.querySelector(".news-time")?.textContent || "";
+      const match = timeText.match(/\d{2}:\d{2}:\d{2}/);
+      if (match) {
+        const time = new Date("1970-01-01T" + match[0]);
+        if (!earliest || time < earliest) earliest = time;
+        if (!latest || time > latest) latest = time;
+      }
+
+      const title = card.querySelector(".news-title")?.textContent || "";
+      const ch = title.split("]")[0].replace("[", "").trim();
+      if (ch) channels.add(ch);
+    });
+
+    const timeDiff = latest && earliest ? Math.round((latest - earliest) / 60000) : 0;
+    const min = timeDiff % 60;
+    const h = Math.floor(timeDiff / 60);
+    const diffText = timeDiff === 0 ? "동시" : h ? `${h}시간 ${min}분차` : `${min}분차`;
+
+    acc.textContent = `📣 관련뉴스 ${cards.length}건 / 채널 ${channels.size}개 / ${diffText}`;
+  });
+}
+
+window.addEventListener("load", () => {
+  updateAccordionTitles();
+});
+  </script>
+ </body>
 </html>
