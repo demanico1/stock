@@ -2,10 +2,13 @@ const express = require("express");
 const fs = require("fs");
 const path = require("path");
 const { google } = require("googleapis");
+const Papa = require("papaparse");
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// 루트: index.html 제공
 app.get("/", (req, res) => {
   const filePath = path.join(__dirname, "index.html");
   fs.readFile(filePath, "utf8", (err, html) => {
@@ -18,6 +21,7 @@ app.get("/", (req, res) => {
   });
 });
 
+// 시트 목록 조회 (/sheets)
 app.get("/sheets", async (req, res) => {
   try {
     const auth = new google.auth.GoogleAuth({
@@ -41,6 +45,24 @@ app.get("/sheets", async (req, res) => {
   }
 });
 
+// 특정 시트 내용 조회 (/sheet/:gid)
+app.get("/sheet/:gid", async (req, res) => {
+  try {
+    const gid = req.params.gid;
+    const url = `https://docs.google.com/spreadsheets/d/1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4/export?format=csv&gid=${gid}`;
+
+    const response = await fetch(url);
+    const csv = await response.text();
+    const parsed = Papa.parse(csv, { header: true });
+
+    res.json(parsed.data);
+  } catch (error) {
+    console.error("시트 데이터 가져오기 실패:", error.message);
+    res.status(500).send("시트 데이터 가져오기 실패");
+  }
+});
+
+// 서버 실행
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
