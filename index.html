@@ -11,6 +11,9 @@
     .sheet-nav button { margin: 0 6px; padding: 8px 12px; border-radius: 16px; border: 1px solid #ccc; background: #f9f9f9; cursor: pointer; font-size: 0.95em; display: inline-block; }
     .sheet-nav button.active { background: #007bff; color: white; border-color: #007bff; }
     .sheet-title { font-size: 1.2em; font-weight: bold; margin: 20px 0 10px; color: #007bff; }
+    .accordion { background: #fff; cursor: pointer; padding: 14px 16px; width: 100%; border: none; text-align: left; font-weight: bold; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 8px; transition: 0.3s; }
+    .accordion:hover, .accordion.active { background-color: #e4f0ff; }
+    .panel { padding: 0 16px; background-color: white; max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out; border-left: 3px solid #007bff; border-radius: 0 0 8px 8px; }
     .news-item { padding: 12px 0; border-bottom: 1px solid #eee; }
     .news-title { font-weight: bold; color: #222; }
     .news-time { font-size: 0.85em; color: #666; margin-top: 4px; }
@@ -26,40 +29,80 @@
 <script>
 let currentBtn = null;
 
+function renderGrouped(data, container) {
+  let i = 0;
+  while (i < data.length) {
+    const row = data[i];
+    const title = row["뉴스 제목"] || "";
+    if (title.includes("채널") && title.includes("관련뉴스")) {
+      const groupTitle = title;
+      const acc = document.createElement("button");
+      acc.className = "accordion";
+      acc.textContent = `📣 ${groupTitle}`;
+      const panel = document.createElement("div");
+      panel.className = "panel";
+      i++;
+      while (i < data.length && (data[i]["뉴스 제목"] || "").trim() !== "") {
+        const news = data[i];
+        const title = news["뉴스 제목"];
+        const link = news["링크"];
+        const time = news["시간"];
+        if (title && link) {
+          const item = document.createElement("div");
+          item.className = "news-item";
+          item.innerHTML = `<div class="news-title">${title}</div><div class="news-time">🕒 ${time}</div><div class="news-link"><a href="${link}" target="_blank">👉 뉴스 보러가기</a></div>`;
+          panel.appendChild(item);
+        }
+        i++;
+      }
+      acc.onclick = () => {
+        acc.classList.toggle("active");
+        panel.style.maxHeight = panel.style.maxHeight ? null : panel.scrollHeight + "px";
+      };
+      container.appendChild(acc);
+      container.appendChild(panel);
+    } else {
+      i++;
+    }
+  }
+}
+
+function renderFlat(data, container) {
+  data.forEach(row => {
+    const title = row["뉴스 제목"];
+    const link = row["링크"];
+    const time = row["시간"];
+    if (title && link) {
+      const item = document.createElement("div");
+      item.className = "news-item";
+      item.innerHTML = `<div class="news-title">${title}</div><div class="news-time">🕒 ${time}</div><div class="news-link"><a href="${link}" target="_blank">👉 뉴스 보러가기</a></div>`;
+      container.appendChild(item);
+    }
+  });
+}
+
 function loadSheet(gid, name, btn) {
   if (currentBtn) currentBtn.classList.remove('active');
   currentBtn = btn;
   btn.classList.add('active');
-
   document.getElementById("content").innerHTML = "<p class='loading'>⏳ 뉴스 데이터를 불러오는 중입니다...</p>";
   fetch(`/sheet/${gid}`)
     .then(res => res.json())
     .then(data => {
       const container = document.createElement("div");
       container.innerHTML = `<div class="sheet-title">📌 ${name}</div>`;
-      data.forEach(row => {
-        const title = row["대표 뉴스 제목"] || row["뉴스 제목"];
-        const link = row["최신 뉴스 링크"] || row["링크"];
-        const latest = row["최신 뉴스 시간"] || row["시간"];
-        const first = row["최초 뉴스 시간"];
-        if (!title || !link) return;
-
-        const item = document.createElement("div");
-        item.className = "news-item";
-        item.innerHTML = `
-          <div class="news-title">${title}</div>
-          <div class="news-time">🕒 ${first || ""} ~ ${latest}</div>
-          <div class="news-link"><a href="${link}" target="_blank">👉 뉴스 보러가기</a></div>
-        `;
-        container.appendChild(item);
+      const isGrouped = data.some(row => {
+        const t = row["뉴스 제목"] || "";
+        return t.includes("채널") && t.includes("관련뉴스");
       });
+      if (isGrouped) renderGrouped(data, container);
+      else renderFlat(data, container);
       const content = document.getElementById("content");
       content.innerHTML = "";
       content.appendChild(container);
     });
 }
 
-// 시트 목록 불러오기
 fetch("/sheets")
   .then(res => res.json())
   .then(sheets => {
