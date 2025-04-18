@@ -53,7 +53,7 @@
       max-width: 1400px;
       margin: 0 auto;
       position: relative;
-      margin-top: 60px;
+      margin-top: 100px;
     }
 
     .container::after {
@@ -66,49 +66,24 @@
       padding-right: 16px;
     }
 
+    .filter-area {
+      position: fixed;
+      top: 44px;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      padding: 8px 16px;
+    }
+
     .filter-buttons {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
-      padding: 8px 16px;
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: var(--card-shadow);
-      position: fixed;
-      top: 52px;
-      left: 0;
-      right: 0;
-      z-index: 999;
       justify-content: center;
       align-items: center;
-    }
-
-    .filter-buttons.fixed {
-      position: fixed;
-      top: 52px;
-      left: 0;
-      right: 0;
-      z-index: 999;
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: var(--card-shadow);
-      padding: 8px 16px;
-      justify-content: center;
-      transform: translateY(0);
-      opacity: 1;
-    }
-
-    /* 필터 고정 시 컨텐츠 밀림 방지 */
-    .filter-buttons-placeholder {
-      display: none;
-      height: 0;
-      margin: 8px 0;
-      transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .filter-buttons-placeholder.visible {
-      display: block;
-      height: 54px; /* 필터 버튼 영역 높이 + 패딩 정확히 계산 */
     }
 
     .filter-label {
@@ -424,10 +399,9 @@
         padding: 0;
       }
 
-      .filter-buttons {
-        padding: 4px;
-        gap: 6px;
-        top: 48px;
+      .filter-area {
+        top: 40px;
+        padding: 6px 8px;
       }
 
       .filter-button {
@@ -442,7 +416,7 @@
 
       .news-container {
         height: auto;
-        margin-top: 52px;
+        margin-top: 90px;
       }
 
       .search-area {
@@ -579,7 +553,7 @@
       top: 0;
       left: 0;
       right: 0;
-      z-index: 1000;
+      z-index: 1001;
       background: var(--card-bg);
       padding: 8px;
       display: flex;
@@ -750,25 +724,29 @@
     </button>
   </div>
 
+  <!-- 필터 영역 -->
+  <div class="filter-area">
+    <div class="filter-buttons">
+      <span class="filter-label">뉴스필터</span>
+      <button class="filter-button all active" onclick="setFilter('all')">
+        <span>전체</span>
+      </button>
+      <button class="filter-button top" onclick="setFilter('top')">
+        <span>매우 중요</span>
+      </button>
+      <button class="filter-button mid" onclick="setFilter('mid')">
+        <span>중요</span>
+      </button>
+      <button class="filter-button low" onclick="setFilter('low')">
+        <span>보통</span>
+      </button>
+    </div>
+  </div>
+
   <div class="container">
     <div class="left-panel">
       <div class="news-container">
         <h3>📰 HOT 뉴스</h3>
-        <div class="filter-buttons">
-          <span class="filter-label">뉴스필터</span>
-          <button class="filter-button all active" onclick="setFilter('all')">
-            <span>전체</span>
-          </button>
-          <button class="filter-button top" onclick="setFilter('top')">
-            <span>매우 중요</span>
-          </button>
-          <button class="filter-button mid" onclick="setFilter('mid')">
-            <span>중요</span>
-          </button>
-          <button class="filter-button low" onclick="setFilter('low')">
-            <span>보통</span>
-          </button>
-        </div>
         <div class="news-list" id="hot-news-list">
           <div class="loading-spinner" id="hot-news-loading">
             <span>뉴스를 불러오는 중</span>
