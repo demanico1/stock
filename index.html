@@ -80,7 +80,7 @@
 
     .filter-buttons.fixed {
       position: fixed;
-      top: 52px; /* 레이아웃 컨트롤 높이 + 여유 간격 */
+      top: 52px;
       left: 0;
       right: 0;
       z-index: 999;
@@ -88,6 +88,7 @@
       border-bottom: 1px solid var(--border-color);
       box-shadow: var(--card-shadow);
       padding: 8px 16px;
+      justify-content: center;
     }
 
     /* 필터 고정 시 컨텐츠 밀림 방지 */
@@ -973,7 +974,7 @@
       });
     }
 
-    // 필터 설정 함수 추가
+    // 필터 설정 함수 수정
     function setFilter(filter) {
         currentFilter = filter;
         
@@ -984,6 +985,15 @@
                 btn.classList.add('active');
             }
         });
+        
+        // 필터 버튼이 고정된 상태라면 최상단으로 스크롤
+        const filterButtons = document.querySelector('.filter-buttons');
+        if (filterButtons.classList.contains('fixed')) {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
         
         // 필터링된 데이터 렌더링
         renderFilteredData(currentData);
