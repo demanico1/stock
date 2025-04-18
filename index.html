@@ -382,7 +382,7 @@
       .container {
         flex-direction: column;
         gap: 12px;
-        margin-top: 65px;
+        margin-top: 55px !important;
       }
 
       .container::after {
@@ -396,12 +396,13 @@
       }
 
       .filter-area {
-        padding: 4px 6px;
+        padding: 2px 4px;
       }
 
       .filter-button {
-        padding: 3px 10px !important;
-        font-size: 10px;
+        height: 24px;
+        padding: 2px 8px !important;
+        font-size: 11px;
       }
 
       .filter-button::before {
@@ -484,11 +485,17 @@
       }
 
       .layout-controls {
-        padding: 6px;
+        padding: 4px;
+        gap: 4px;
       }
 
       .filter-buttons {
-        gap: 6px;
+        gap: 4px;
+      }
+
+      .layout-controls button {
+        padding: 4px 8px;
+        font-size: 11px;
       }
     }
 
@@ -525,7 +532,11 @@
       }
 
       .container {
-        margin-top: 60px;
+        margin-top: 50px !important;
+      }
+
+      .layout-controls {
+        padding: 2px;
       }
     }
 
@@ -568,6 +579,7 @@
       gap: 8px;
       border-bottom: 1px solid var(--border-color);
       box-shadow: var(--card-shadow);
+      height: auto;
     }
 
     .layout-buttons {
