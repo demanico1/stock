@@ -87,46 +87,63 @@
       width: 100%;
       margin-bottom: 8px;
       font-size: 12px;
+      position: sticky;
+      top: 0;
+      background: var(--card-bg);
+      padding: 8px 0;
+      z-index: 10;
+      border-bottom: 1px solid var(--border-color);
     }
 
     .filter-button {
-      width: auto !important;
-      height: 24px;
-      min-width: 24px;
-      padding: 0 !important;
-      border-radius: 50% !important;
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
+      gap: 6px;
+      padding: 4px 12px !important;
+      border-radius: 20px !important;
+      background: var(--card-bg) !important;
+      border: 1px solid var(--border-color) !important;
+      color: var(--text-color);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s ease;
       position: relative;
-      border: none !important;
+      overflow: hidden;
       margin: 0 !important;
+      height: auto !important;
+      min-width: auto !important;
+    }
+
+    .filter-button::before {
+      content: '';
+      display: block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .filter-button.all::before { background: #8B0000; }
+    .filter-button.top::before { background: #FF0000; }
+    .filter-button.mid::before { background: #FFA500; }
+    .filter-button.low::before { background: #FFD700; }
+
+    .filter-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-button.active {
+      background: var(--bg-color) !important;
+      border-color: var(--link-color) !important;
+      box-shadow: 0 0 0 1px var(--link-color);
     }
 
     .filter-button span {
-      position: absolute;
-      bottom: -20px;
-      left: 50%;
-      transform: translateX(-50%);
+      position: static;
+      transform: none;
       white-space: nowrap;
-      font-size: 10px;
-      color: var(--text-secondary);
-    }
-
-    .filter-button.all { background: #8B0000 !important; }
-    .filter-button.top { background: #FF0000 !important; }
-    .filter-button.mid { background: #FFA500 !important; }
-    .filter-button.low { background: #FFD700 !important; }
-
-    .filter-button.active::after {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      border: 2px solid white;
-      border-radius: 50%;
+      color: var(--text-color);
     }
 
     .news-container {
@@ -138,12 +155,12 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       border: 1px solid var(--border-color);
+      position: relative;
     }
 
     .news-container h3 {
-      margin-bottom: 12px;
-      color: var(--text-color);
-      font-size: 14px;
+      margin: 0;
+      padding: 8px 0;
       position: sticky;
       top: 0;
       background: var(--card-bg);
@@ -180,6 +197,7 @@
     .search-form input {
       flex: 1;
       min-width: 0;
+      max-width: 100%;
       padding: 8px 12px;
       border-radius: 4px;
       border: 1px solid var(--border-color);
@@ -277,17 +295,14 @@
 
     .news-card.top { 
       background: var(--top-card-bg); 
-      border-left: 4px solid var(--divider-color); 
     }
 
     .news-card.mid { 
       background: var(--mid-card-bg); 
-      border-left: 4px solid var(--divider-color); 
     }
 
     .news-card.low { 
       background: var(--low-card-bg); 
-      border-left: 4px solid var(--divider-color); 
     }
 
     .news-title {
@@ -396,16 +411,17 @@
 
       .filter-buttons {
         padding: 4px;
+        gap: 6px;
       }
 
       .filter-button {
-        height: 20px;
-        min-width: 20px;
+        padding: 3px 10px !important;
+        font-size: 10px;
       }
 
-      .filter-button span {
-        bottom: -16px;
-        font-size: 9px;
+      .filter-button::before {
+        width: 10px;
+        height: 10px;
       }
 
       .news-container {
@@ -414,24 +430,23 @@
       }
 
       .search-area {
-        padding: 12px;
+        padding: 8px;
       }
 
       .search-form {
-        flex-direction: column;
-        gap: 8px;
+        gap: 4px;
       }
 
       .search-form input {
+        padding: 6px 8px;
+        font-size: 14px;
         width: 100%;
-        padding: 10px;
-        font-size: 16px;
+        min-width: 0;
       }
 
       .search-form button {
-        width: 100%;
-        padding: 10px;
-        font-size: 1em;
+        padding: 6px 12px;
+        white-space: nowrap;
       }
 
       .search-results {
@@ -453,6 +468,22 @@
         right: 20px;
         text-align: center;
       }
+
+      [data-layout="split"] .container {
+        flex-direction: row !important;
+      }
+
+      [data-layout="split"] .left-panel,
+      [data-layout="split"] .right-panel {
+        width: 50% !important;
+        padding: 4px !important;
+        min-width: 0;
+      }
+
+      .search-area h3 {
+        font-size: 12px;
+        margin-bottom: 8px;
+      }
     }
 
     /* 작은 모바일 화면 최적화 */
@@ -473,48 +504,47 @@
       .news-info {
         font-size: 0.85em;
       }
+
+      .search-area {
+        padding: 6px;
+      }
+
+      .search-form input {
+        padding: 4px 6px;
+      }
+
+      .search-form button {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
     }
 
-    /* 테마 토글 버튼 스타일 */
+    /* 테마 토글 버튼 스타일 수정 */
     .theme-toggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
       background: var(--card-bg);
       border: 1px solid var(--border-color);
-      border-radius: 20px;
-      padding: 8px 16px;
+      border-radius: 16px;
+      padding: 6px 12px;
       color: var(--text-color);
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 14px;
+      font-size: 12px;
       transition: all 0.2s;
-      box-shadow: var(--card-shadow);
     }
 
     .theme-toggle:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      background: var(--link-color);
+      color: white;
+      border-color: var(--link-color);
     }
 
     .theme-toggle .icon {
-      font-size: 16px;
+      font-size: 14px;
     }
 
-    @media (max-width: 768px) {
-      .theme-toggle {
-        top: auto;
-        bottom: 20px;
-        right: 20px;
-        font-size: 12px;
-        padding: 6px 12px;
-      }
-    }
-
-    /* 레이아웃 선택 버튼 */
+    /* 레이아웃 컨트롤 수정 */
     .layout-controls {
       position: fixed;
       top: 0;
@@ -558,6 +588,88 @@
     [data-layout="split"] .right-panel {
       width: 50%;
     }
+
+    /* 스켈레톤 로딩 스타일 */
+    .skeleton-loading {
+      animation: skeleton-loading 1s linear infinite alternate;
+    }
+
+    @keyframes skeleton-loading {
+      0% {
+        background-color: rgba(var(--text-color-rgb), 0.05);
+      }
+      100% {
+        background-color: rgba(var(--text-color-rgb), 0.15);
+      }
+    }
+
+    .skeleton-card {
+      background: var(--card-bg);
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .skeleton-title {
+      height: 20px;
+      width: 80%;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .skeleton-info {
+      height: 16px;
+      width: 60%;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-link {
+      height: 16px;
+      width: 40%;
+      border-radius: 4px;
+    }
+
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: var(--text-secondary);
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .loading-spinner .dots {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .loading-spinner .dot {
+      width: 8px;
+      height: 8px;
+      background: currentColor;
+      border-radius: 50%;
+      animation: dot-flashing 1s infinite linear alternate;
+    }
+
+    .loading-spinner .dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .loading-spinner .dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes dot-flashing {
+      0% {
+        opacity: 0.2;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
   </style>
 </head>
 <body>
@@ -592,7 +704,34 @@
       <div class="news-container">
         <h3>📰 HOT 뉴스</h3>
         <div class="news-list" id="hot-news-list">
-          <!-- HOT 뉴스 카드가 여기에 표시됩니다 -->
+          <div class="loading-spinner" id="hot-news-loading">
+            <span>뉴스를 불러오는 중</span>
+            <div class="dots">
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
+          </div>
+          <div id="hot-news-skeleton">
+            <div class="skeleton-card">
+              <div class="skeleton-title skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-link skeleton-loading"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="skeleton-title skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-link skeleton-loading"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="skeleton-title skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-link skeleton-loading"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -735,11 +874,18 @@
     // 뉴스 카드 렌더링
     function renderNewsCards(data, targetElement, keywords = []) {
       const list = document.getElementById(targetElement);
+      const loadingElement = document.getElementById('hot-news-loading');
+      const skeletonElement = document.getElementById('hot-news-skeleton');
+      
+      // 로딩 및 스켈레톤 UI 제거
+      if (loadingElement) loadingElement.style.display = 'none';
+      if (skeletonElement) skeletonElement.style.display = 'none';
+      
       list.innerHTML = "";
 
       if (!data.length) {
         list.innerHTML = `
-          <div style="text-align:center; padding: 20px; color: #888;">
+          <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
             😢 표시할 뉴스가 없습니다
           </div>
         `;
@@ -1010,6 +1156,15 @@
           renderFilteredData(currentData);
         });
       });
+
+      // 테마 색상 RGB 값 설정
+      const computedStyle = getComputedStyle(document.documentElement);
+      const textColor = computedStyle.getPropertyValue('--text-color');
+      // RGB 값 추출 및 CSS 변수로 설정
+      const rgb = textColor.match(/\d+/g);
+      if (rgb) {
+        document.documentElement.style.setProperty('--text-color-rgb', rgb.join(','));
+      }
 
       try {
         // 종목 정보 로드
