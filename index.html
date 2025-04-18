@@ -913,7 +913,7 @@
     // 필터링된 데이터 렌더링
     function renderFilteredData(data) {
         if (currentFilter === "all") {
-            // 전체: 원본 순서 유지, 점수와 등급만 표시
+            // 전체: 원본 순서 유지
             renderNewsCards(data, "hot-news-list");
             return;
         }
@@ -1095,6 +1095,12 @@
         if (btn.dataset.layout === layout) {
           btn.classList.add('active');
         }
+      });
+
+      // 화면 최상단으로 부드럽게 스크롤
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
       });
     }
 
