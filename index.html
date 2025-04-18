@@ -315,12 +315,19 @@
       searchButton.textContent = "검색 중...";
       searchingText.style.display = "block";
 
+      const fetchOptions = {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      };
+
       try {
-        const sheetName = getTodayDbSheetName();  // 오늘 날짜 기준 DB 시트 이름
-        const response = await fetch(`/sheet/${sheetName}`);
+        const sheetName = getTodayDbSheetName();
+        const response = await fetch(`/sheet/${sheetName}`, fetchOptions);
         const data = await response.json();
         
-        // DB 시트 데이터에서 검색 처리
         const replaced = keywords.map(k => stockMap[k] || k);
         const results = data
           .filter(row => {
@@ -331,8 +338,7 @@
           })
           .map(row => ({ row }));
 
-        renderNewsCards(results, replaced);  // 검색 결과 뉴스 렌더링 (DB 시트만)
-
+        renderNewsCards(results, replaced);
       } catch (error) {
         console.error("검색 중 오류:", error);
         document.getElementById("news-list").innerHTML = `
@@ -364,6 +370,15 @@
       const searchButton = document.getElementById("search-button");
       const filterButtons = document.querySelectorAll(".filter-buttons button");
 
+      // API 요청 옵션
+      const fetchOptions = {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      };
+
       // 검색 이벤트
       searchButton.addEventListener("click", handleSearch);
       searchInput.addEventListener("keydown", e => {
@@ -385,12 +400,12 @@
 
       try {
         // 종목 정보 로드
-        const sheetsResponse = await fetch("/sheets");
+        const sheetsResponse = await fetch("/sheets", fetchOptions);
         const sheets = await sheetsResponse.json();
         const stockSheet = sheets.find(s => s.name === "종목정보");
         
         if (stockSheet) {
-          const stockResponse = await fetch(`/sheet/${stockSheet.gid}`);
+          const stockResponse = await fetch(`/sheet/${stockSheet.gid}`, fetchOptions);
           const stockData = await stockResponse.json();
           
           stockMap = {};
@@ -406,7 +421,7 @@
         // HOT 시트 데이터 로드
         const hotSheet = sheets.find(s => s.name.includes("HOT"));
         if (hotSheet) {
-          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`);
+          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`, fetchOptions);
           const hotData = await hotResponse.json();
           
           currentData = hotData.map(row => ({
