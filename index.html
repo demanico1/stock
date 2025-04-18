@@ -166,6 +166,23 @@
         width: 100%;
       }
     }
+
+    .refresh-notification {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      animation: slideIn 0.3s ease-out;
+      z-index: 1000;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -265,15 +282,20 @@
         return;
       }
 
-      data.forEach(item => {
+      console.log('렌더링할 뉴스 수:', data.length); // 디버깅: 렌더링 확인
+
+      data.forEach((item, index) => {
         const card = document.createElement("div");
         card.className = `news-card ${item.grade || ""}`;
         
-        const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
-        const time = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
+        // 필드명 체크 개선
+        const title = item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "";
+        const time = item.row["시간"] || item.row["최신 뉴스 시간"] || "";
         const newsCount = item.row["관련뉴스 수"] || "0";
         const channelCount = item.row["언급 채널 수"] || "0";
-        const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
+        const link = item.row["링크"] || item.row["최신 뉴스 링크"] || "";
+
+        console.log(`뉴스 ${index + 1}:`, { title, time }); // 디버깅: 각 뉴스 정보 확인
         
         const safeLink = !link || link.includes("stockinfo7.com")
           ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
@@ -325,25 +347,55 @@
 
       try {
         const sheetName = getTodayDbSheetName();
+        console.log('검색 시트:', sheetName); // 디버깅: 시트명 확인
+
         const response = await fetch(`/sheet/${sheetName}`, fetchOptions);
         const data = await response.json();
         
+        console.log('검색 데이터 수:', data.length); // 디버깅: 데이터 확인
+        
         const replaced = keywords.map(k => stockMap[k] || k);
+        console.log('검색 키워드:', replaced); // 디버깅: 변환된 키워드 확인
+
+        // 검색 로직 개선
         const results = data
           .filter(row => {
-            const title = row["뉴스 제목"] || "";
-            return replaced.every(k => 
+            // 제목 필드 확인
+            const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
+            console.log('검색 대상 제목:', title); // 디버깅: 제목 확인
+            
+            // 키워드 매칭 확인
+            const matches = replaced.every(k => 
               title.toLowerCase().includes(k.toLowerCase())
             );
+            
+            if (matches) {
+              console.log('매칭된 제목:', title); // 디버깅: 매칭 결과 확인
+            }
+            
+            return matches;
           })
           .map(row => ({ row }));
 
-        renderNewsCards(results, replaced);
+        console.log('검색 결과 수:', results.length); // 디버깅: 결과 수 확인
+
+        if (results.length === 0) {
+          document.getElementById("news-list").innerHTML = `
+            <div style="text-align:center; padding: 20px; color: #888;">
+              😢 검색 결과가 없습니다<br>
+              검색어: ${keywords.join(", ")}
+            </div>
+          `;
+        } else {
+          renderNewsCards(results, replaced);
+        }
+
       } catch (error) {
         console.error("검색 중 오류:", error);
         document.getElementById("news-list").innerHTML = `
           <div style="text-align:center; padding: 20px; color: #888;">
-            😢 검색 중 오류가 발생했습니다
+            😢 검색 중 오류가 발생했습니다<br>
+            ${error.message}
           </div>
         `;
       } finally {
@@ -356,12 +408,71 @@
     // 필터링된 데이터 렌더링
     function renderFilteredData(data) {
       if (currentFilter === "all") {
+        // 전체 버튼: 원본 시트 순서 유지
         renderNewsCards(data);
         return;
       }
 
-      const filtered = data.filter(item => item.grade === currentFilter);
+      // 나머지 버튼들: 점수순 정렬 후 필터링
+      const filtered = data
+        .filter(item => item.grade === currentFilter)
+        .sort((a, b) => b.score - a.score);  // 점수 높은 순
+      
       renderNewsCards(filtered);
+    }
+
+    // 데이터 새로고침 함수
+    async function refreshData(silent = true) {
+      const fetchOptions = {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      };
+
+      try {
+        // HOT 시트 데이터 새로고침
+        const sheetsResponse = await fetch("/sheets", fetchOptions);
+        const sheets = await sheetsResponse.json();
+        const hotSheet = sheets.find(s => s.name.includes("HOT"));
+        
+        if (hotSheet) {
+          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`, fetchOptions);
+          const hotData = await hotResponse.json();
+          
+          // 원본 데이터 순서 보존을 위해 인덱스 추가
+          const newData = hotData.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          
+          // 데이터 변경 확인
+          const oldTitles = currentData.map(item => item.row["대표 뉴스 제목"]).join("|");
+          const newTitles = newData.map(item => item.row["대표 뉴스 제목"]).join("|");
+          
+          if (oldTitles !== newTitles) {
+            currentData = assignGrade(newData);
+            renderFilteredData(currentData);
+            
+            if (!silent) {
+              // 새로운 데이터가 있을 때만 알림
+              const notification = document.createElement("div");
+              notification.className = "refresh-notification";
+              notification.textContent = "🔄 새로운 뉴스가 업데이트되었습니다";
+              document.body.appendChild(notification);
+              
+              // 3초 후 알림 제거
+              setTimeout(() => {
+                notification.remove();
+              }, 3000);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("데이터 새로고침 중 오류:", error);
+      }
     }
 
     // 초기화
@@ -369,6 +480,28 @@
       const searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
       const filterButtons = document.querySelectorAll(".filter-buttons button");
+
+      // 스타일 추가
+      const style = document.createElement("style");
+      style.textContent = `
+        .refresh-notification {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          background: rgba(0, 0, 0, 0.8);
+          color: white;
+          padding: 12px 20px;
+          border-radius: 8px;
+          animation: slideIn 0.3s ease-out;
+          z-index: 1000;
+        }
+        
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
 
       // API 요청 옵션
       const fetchOptions = {
@@ -424,14 +557,19 @@
           const hotResponse = await fetch(`/sheet/${hotSheet.gid}`, fetchOptions);
           const hotData = await hotResponse.json();
           
-          currentData = hotData.map(row => ({
+          currentData = hotData.map((row, index) => ({
             row,
-            score: calculateScore(row)
+            score: calculateScore(row),
+            originalIndex: index
           }));
           
           currentData = assignGrade(currentData);
           renderFilteredData(currentData);
         }
+
+        // 1분마다 자동 새로고침
+        setInterval(refreshData, 60000);
+
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
       }
