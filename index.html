@@ -900,10 +900,12 @@
         card.className = `news-card ${item.grade || ""}`;
         
         const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
-        const time = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
+        const latestTime = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
+        const firstTime = item.row["최초 뉴스 시간"] || "";
         const newsCount = item.row["관련뉴스 수"] || "0";
         const channelCount = item.row["언급 채널 수"] || "0";
         const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
+        const originalLink = item.row["링크"] || "";
         
         const safeLink = !link || link.includes("stockinfo7.com")
           ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
@@ -915,16 +917,15 @@
 
         card.innerHTML = `
           <div class="news-title">${highlightedTitle}</div>
-          <div class="news-info">🕒 ${time}</div>
+          <div class="news-info">🕒 최신 ${latestTime}${firstTime ? ` • 최초 ${firstTime}` : ''}</div>
           <div class="news-info">
             📡 관련뉴스 ${newsCount}건 / 언급채널 ${channelCount}개
             ${item.score ? `<span style="font-size:11px; color:#888;">(${item.score}점)</span>` : ''}
           </div>
-          <div class="news-link">
+          <div class="news-link" style="display:flex; gap:8px; align-items:center;">
             <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
-            ${!link || link.includes("stockinfo7.com") 
-              ? '<span style="color:#999; font-size:11px; margin-left:4px;">주의</span>' 
-              : ''}
+            ${(!link || link.includes("stockinfo7.com")) ? 
+              `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
           </div>
         `;
 
