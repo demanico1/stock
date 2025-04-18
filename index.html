@@ -53,6 +53,7 @@
       max-width: 1400px;
       margin: 0 auto;
       position: relative;
+      padding-top: 8px;
     }
 
     .container::after {
@@ -381,7 +382,7 @@
       .container {
         flex-direction: column;
         gap: 12px;
-        margin-top: 45px !important;
+        padding-top: 4px;
       }
 
       .container::after {
@@ -486,7 +487,6 @@
       }
 
       .layout-controls {
-        min-height: 40px;
         padding: 4px;
       }
 
@@ -533,11 +533,11 @@
       }
 
       .container {
-        margin-top: 40px !important;
+        padding-top: 2px;
       }
 
       .layout-controls {
-        min-height: 36px;
+        padding: 2px;
       }
     }
 
@@ -568,7 +568,7 @@
 
     /* 레이아웃 컨트롤 수정 */
     .layout-controls {
-      position: fixed;
+      position: sticky;
       top: 0;
       left: 0;
       right: 0;
@@ -581,6 +581,7 @@
       border-bottom: 1px solid var(--border-color);
       box-shadow: var(--card-shadow);
       height: auto;
+      width: 100%;
     }
 
     .layout-buttons {
@@ -1170,6 +1171,32 @@
       document.getElementById("news-count").textContent = `${matches.length}건`;
     }
 
+    // 스크립트에 디바운스 함수 추가
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // 종목코드 확인 함수
+    function isStockCode(input) {
+      return /^[0-9]{6}$/.test(input);
+    }
+
+    // 종목코드를 종목명으로 변환하는 함수
+    function convertStockCodeToName(input) {
+      if (isStockCode(input) && stockMap[input]) {
+        return stockMap[input];
+      }
+      return input;
+    }
+
     // 검색 처리 함수 수정
     async function handleSearch(initialSearch = false) {
       const input = !initialSearch ? document.getElementById("search-input").value.trim() : '';
@@ -1345,15 +1372,9 @@
       }
     }
 
-    // 컨테이너 마진 동적 설정 함수
+    // 컨테이너 마진 동적 설정 함수 제거
     function updateContainerMargin() {
-      const layoutControls = document.querySelector('.layout-controls');
-      const container = document.querySelector('.container');
-      if (layoutControls && container) {
-        const layoutHeight = layoutControls.getBoundingClientRect().height;
-        const marginTop = layoutHeight + 4; // 4px의 여유 공간
-        container.style.marginTop = marginTop + 'px';
-      }
+      // 이 함수는 더 이상 필요하지 않으므로 제거
     }
 
     // 초기화
@@ -1361,13 +1382,25 @@
       const searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
 
-      // URL 파라미터 변경 감지
-      window.addEventListener('popstate', () => {
-        initializeFromURL();
+      // 입력 이벤트에 디바운스 적용
+      const handleStockCodeInput = debounce((input) => {
+        if (isStockCode(input)) {
+          const stockName = stockMap[input];
+          if (stockName) {
+            searchInput.value = stockName;
+          }
+        }
+      }, 500);
+
+      // 입력 이벤트 리스너
+      searchInput.addEventListener("input", (e) => {
+        const input = e.target.value.trim();
+        handleStockCodeInput(input);
       });
 
       // 검색 이벤트
       searchButton.addEventListener("click", () => handleSearch());
+
       searchInput.addEventListener("keydown", e => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -1388,19 +1421,6 @@
       window.addEventListener('scroll', throttle(() => {
         handleScroll();
       }, 100));
-
-      // 초기 마진 설정
-      updateContainerMargin();
-
-      // 리사이즈 이벤트에 마진 업데이트 추가
-      window.addEventListener('resize', throttle(() => {
-        updateContainerMargin();
-      }, 100));
-
-      // 방향 전환 이벤트 리스너 추가
-      window.addEventListener('orientationchange', () => {
-        setTimeout(updateContainerMargin, 100);
-      });
 
       try {
         // 종목 정보 로드
@@ -1457,12 +1477,6 @@
         
         // 초기 레이아웃을 HOT으로 설정
         setLayout('hot');
-
-        // 필터 버튼 placeholder 추가
-        const filterButtons = document.querySelector('.filter-buttons');
-        const placeholder = document.createElement('div');
-        placeholder.className = 'filter-buttons-placeholder';
-        filterButtons.parentNode.insertBefore(placeholder, filterButtons);
 
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
