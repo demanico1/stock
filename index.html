@@ -53,7 +53,7 @@
       max-width: 1400px;
       margin: 0 auto;
       position: relative;
-      margin-top: 100px;
+      margin-top: 110px;
     }
 
     .container::after {
@@ -67,15 +67,10 @@
     }
 
     .filter-area {
-      position: fixed;
-      top: 44px;
-      left: 0;
-      right: 0;
-      z-index: 1000;
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: var(--card-shadow);
-      padding: 8px 16px;
+      position: static;
+      border-bottom: none;
+      box-shadow: none;
+      padding: 0;
     }
 
     .filter-buttons {
@@ -387,6 +382,7 @@
       .container {
         flex-direction: column;
         gap: 12px;
+        margin-top: 100px;
       }
 
       .container::after {
@@ -400,7 +396,6 @@
       }
 
       .filter-area {
-        top: 40px;
         padding: 6px 8px;
       }
 
@@ -557,10 +552,16 @@
       background: var(--card-bg);
       padding: 8px;
       display: flex;
+      flex-direction: column;
       gap: 8px;
-      justify-content: center;
       border-bottom: 1px solid var(--border-color);
       box-shadow: var(--card-shadow);
+    }
+
+    .layout-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
     }
 
     .layout-controls button {
@@ -716,30 +717,32 @@
 
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
-    <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
-    <button onclick="setLayout('db')" data-layout="db">DB 영역</button>
-    <button onclick="setLayout('split')" data-layout="split" class="active">5:5 영역</button>
-    <button onclick="toggleTheme()" class="theme-toggle">
-      <span class="icon">🌓</span>
-    </button>
-  </div>
+    <div class="layout-buttons">
+      <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
+      <button onclick="setLayout('db')" data-layout="db">DB 영역</button>
+      <button onclick="setLayout('split')" data-layout="split" class="active">5:5 영역</button>
+      <button onclick="toggleTheme()" class="theme-toggle">
+        <span class="icon">🌓</span>
+      </button>
+    </div>
 
-  <!-- 필터 영역 -->
-  <div class="filter-area">
-    <div class="filter-buttons">
-      <span class="filter-label">뉴스필터</span>
-      <button class="filter-button all active" onclick="setFilter('all')">
-        <span>전체</span>
-      </button>
-      <button class="filter-button top" onclick="setFilter('top')">
-        <span>매우 중요</span>
-      </button>
-      <button class="filter-button mid" onclick="setFilter('mid')">
-        <span>중요</span>
-      </button>
-      <button class="filter-button low" onclick="setFilter('low')">
-        <span>보통</span>
-      </button>
+    <!-- 필터 영역 -->
+    <div class="filter-area">
+      <div class="filter-buttons">
+        <span class="filter-label">뉴스필터</span>
+        <button class="filter-button all active" onclick="setFilter('all')">
+          <span>전체</span>
+        </button>
+        <button class="filter-button top" onclick="setFilter('top')">
+          <span>매우 중요</span>
+        </button>
+        <button class="filter-button mid" onclick="setFilter('mid')">
+          <span>중요</span>
+        </button>
+        <button class="filter-button low" onclick="setFilter('low')">
+          <span>보통</span>
+        </button>
+      </div>
     </div>
   </div>
 
