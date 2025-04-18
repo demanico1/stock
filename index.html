@@ -900,6 +900,7 @@
     const DB_UPDATE_INTERVAL = 60000; // 1분
     let lastDataTimestamp = null;
     const UPDATE_CHECK_INTERVAL = 15000; // 15초마다 업데이트 체크
+    let stockCache = null;
 
     // 점수 계산
     function calculateScore(row) {
@@ -1511,34 +1512,99 @@
       // 이 함수는 더 이상 필요하지 않으므로 제거
     }
 
+    // 종목 정보 시트 찾기
+    async function findStockSheet() {
+      try {
+        const response = await fetch("/sheets");
+        const sheets = await response.json();
+        const stockSheet = sheets.find(s => s.name === "종목정보");
+        
+        if (!stockSheet) {
+          throw new Error("종목정보 시트를 찾을 수 없습니다.");
+        }
+        
+        console.log('종목정보 시트 찾음:', stockSheet.name);
+        return stockSheet;
+      } catch (error) {
+        console.error('종목정보 시트 검색 실패:', error);
+        throw error;
+      }
+    }
+    
+    // 종목 정보 로드
+    async function loadStockData() {
+      if (stockCache) {
+        return stockCache;
+      }
+      
+      try {
+        const stockSheet = await findStockSheet();
+        const response = await fetch(`/sheet/${stockSheet.gid}`);
+        
+        if (!response.ok) {
+          throw new Error(`API 오류: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        stockCache = {};
+        
+        // 종목코드와 종목명을 매핑
+        data.forEach(row => {
+          const code = row["종목코드"];
+          const name = row["종목명"];
+          if (code && name) {
+            stockCache[code] = name;
+          }
+        });
+        
+        console.log('종목 정보 로드 완료:', Object.keys(stockCache).length, '건');
+        return stockCache;
+      } catch (error) {
+        console.error('종목 정보 로드 실패:', error);
+        throw error;
+      }
+    }
+
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
       const searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
 
-      // 입력 이벤트에 디바운스 적용 (100ms로 변경)
-      const handleStockCodeInput = debounce((input) => {
-        input = input.trim();
-        if (isStockCode(input)) {
-          const stockName = stockMap[input];
-          if (stockName) {
-            searchInput.value = stockName;
-            // 변환 성공 시 시각적 피드백
-            searchInput.style.backgroundColor = '#e8f0fe';
-            setTimeout(() => {
-              searchInput.style.backgroundColor = '';
-            }, 200);
+      // 디바운스 함수
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+      
+      // 종목 코드 변환 함수
+      async function convertStockCode(input) {
+        try {
+          const stockData = await loadStockData();
+          const code = input.trim();
+          
+          // 6자리 숫자인 경우에만 변환 시도
+          if (/^\d{6}$/.test(code) && stockData[code]) {
+            searchInput.value = stockData[code];
+            console.log('종목 코드 변환:', code, '->', stockData[code]);
           }
+        } catch (error) {
+          console.error('종목 코드 변환 실패:', error);
         }
-      }, 100);
-
-      // 입력 이벤트 리스너
+      }
+      
+      // 입력 이벤트에 디바운스 적용
+      const debouncedConvert = debounce(convertStockCode, 300);
+      
+      // 검색창 입력 이벤트 처리
       searchInput.addEventListener("input", (e) => {
-        const input = e.target.value.trim();
-        // 6자리 숫자인 경우에만 변환 시도
-        if (/^\d{6}$/.test(input)) {
-          handleStockCodeInput(input);
-        }
+        debouncedConvert(e.target.value);
       });
 
       // 검색 이벤트
@@ -1567,23 +1633,7 @@
 
       try {
         // 종목 정보 로드
-        const sheetsResponse = await fetch("/sheets");
-        const sheets = await sheetsResponse.json();
-        const stockSheet = sheets.find(s => s.name === "종목정보");
-        
-        if (stockSheet) {
-          const stockResponse = await fetch(`/sheet/${stockSheet.gid}`);
-          const stockData = await stockResponse.json();
-          
-          stockMap = {};
-          stockData.forEach(row => {
-            const code = row["종목코드"];
-            const name = row["종목명"];
-            if (code && name) {
-              stockMap[code] = name;
-            }
-          });
-        }
+        await loadStockData();
 
         // DB 데이터 미리 로드
         await loadDBData();
