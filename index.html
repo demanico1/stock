@@ -53,7 +53,6 @@
       max-width: 1400px;
       margin: 0 auto;
       position: relative;
-      margin-top: 90px;
     }
 
     .container::after {
@@ -1247,6 +1246,12 @@
     function initializeFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
         
+        // 레이아웃 상태 확인
+        const layoutParam = urlParams.get('layout');
+        if (layoutParam && ['hot', 'db', 'split'].includes(layoutParam)) {
+            setLayout(layoutParam);
+        }
+        
         // 필터 상태 확인
         const filterParam = urlParams.get('filter');
         if (filterParam && ['all', 'top', 'mid', 'low'].includes(filterParam)) {
@@ -1298,6 +1303,11 @@
     function setLayout(layout) {
       document.documentElement.setAttribute('data-layout', layout);
       
+      // URL 쿼리 파라미터 업데이트
+      const url = new URL(window.location);
+      url.searchParams.set('layout', layout);
+      window.history.pushState({}, '', url);
+      
       // 버튼 활성화 상태 업데이트
       document.querySelectorAll('.layout-controls button').forEach(btn => {
         btn.classList.remove('active');
@@ -1335,6 +1345,17 @@
       }
     }
 
+    // 컨테이너 마진 동적 설정 함수
+    function updateContainerMargin() {
+      const layoutControls = document.querySelector('.layout-controls');
+      const container = document.querySelector('.container');
+      if (layoutControls && container) {
+        const layoutHeight = layoutControls.getBoundingClientRect().height;
+        const marginTop = layoutHeight + 4; // 4px의 여유 공간
+        container.style.marginTop = marginTop + 'px';
+      }
+    }
+
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
       const searchInput = document.getElementById("search-input");
@@ -1367,6 +1388,19 @@
       window.addEventListener('scroll', throttle(() => {
         handleScroll();
       }, 100));
+
+      // 초기 마진 설정
+      updateContainerMargin();
+
+      // 리사이즈 이벤트에 마진 업데이트 추가
+      window.addEventListener('resize', throttle(() => {
+        updateContainerMargin();
+      }, 100));
+
+      // 방향 전환 이벤트 리스너 추가
+      window.addEventListener('orientationchange', () => {
+        setTimeout(updateContainerMargin, 100);
+      });
 
       try {
         // 종목 정보 로드
