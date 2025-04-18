@@ -553,14 +553,34 @@
       });
     }
 
-    // 오늘 날짜의 DB 시트명 가져오기
-    function getTodayDbSheetName() {
-      const today = new Date();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const date = String(today.getDate()).padStart(2, '0');
-      const week = ['일', '월', '화', '수', '목', '금', '토'];
-      const dayStr = week[today.getDay()];
-      return `${month}.${date}(${dayStr}) DB`;
+    // DB 시트 찾기
+    async function findDbSheet() {
+      try {
+        const response = await fetch("/sheets");
+        const sheets = await response.json();
+        
+        // 오늘 날짜 구하기
+        const today = new Date();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const date = String(today.getDate()).padStart(2, '0');
+        
+        // 오늘 날짜와 'DB'가 포함된 시트 찾기
+        const dbSheet = sheets.find(s => {
+          const sheetName = s.name.toLowerCase();
+          return sheetName.includes('db') && 
+                 sheetName.includes(`${month}.${date}`);
+        });
+
+        if (!dbSheet) {
+          throw new Error(`${month}.${date} DB 시트를 찾을 수 없습니다.`);
+        }
+
+        console.log('DB 시트 찾음:', dbSheet.name);
+        return dbSheet;
+      } catch (error) {
+        console.error('DB 시트 검색 실패:', error);
+        throw error;
+      }
     }
 
     // DB 데이터 로드
@@ -571,8 +591,9 @@
       }
 
       try {
-        const sheetName = getTodayDbSheetName();
-        const response = await fetch(`/sheet/${sheetName}`);
+        const dbSheet = await findDbSheet();
+        const response = await fetch(`/sheet/${dbSheet.gid}`);
+        
         if (!response.ok) {
           throw new Error(`API 오류: ${response.status}`);
         }
@@ -714,7 +735,7 @@
       } catch (error) {
         console.error("검색 중 오류:", error);
         document.getElementById("search-results-list").innerHTML = `
-          <div style="text-align:center; padding: 20px; color: #888;">
+          <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
             😢 검색 중 오류가 발생했습니다<br>
             ${error.message}
           </div>
