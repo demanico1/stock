@@ -74,6 +74,30 @@
       background: transparent;
       border: none;
       box-shadow: none;
+      transition: all 0.3s ease;
+    }
+
+    .filter-buttons.fixed {
+      position: fixed;
+      top: 44px; /* 레이아웃 컨트롤 높이 + 패딩 */
+      left: 0;
+      right: 0;
+      z-index: 999;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      justify-content: center;
+      padding: 8px;
+    }
+
+    /* 필터 고정 시 컨텐츠 밀림 방지 */
+    .filter-buttons-placeholder {
+      display: none;
+      height: 52px; /* 필터 버튼 영역 높이 + 패딩 */
+    }
+
+    .filter-buttons-placeholder.visible {
+      display: block;
     }
 
     .filter-button {
@@ -450,6 +474,11 @@
       .search-area h3 {
         font-size: 12px;
         margin-bottom: 8px;
+      }
+
+      .filter-buttons.fixed {
+        top: 40px;
+        padding: 6px;
       }
     }
 
@@ -1153,6 +1182,31 @@
       }
     }
 
+    // 필터 버튼 고정 관련 함수
+    function handleFilterButtonsScroll() {
+      const filterButtons = document.querySelector('.filter-buttons');
+      const placeholder = document.querySelector('.filter-buttons-placeholder');
+      const layout = document.documentElement.getAttribute('data-layout');
+      
+      // HOT 또는 split 레이아웃일 때만 동작
+      if (layout === 'db') {
+        filterButtons.classList.remove('fixed');
+        placeholder.classList.remove('visible');
+        return;
+      }
+
+      const rect = filterButtons.getBoundingClientRect();
+      const originalTop = placeholder.offsetTop;
+
+      if (window.scrollY > originalTop) {
+        filterButtons.classList.add('fixed');
+        placeholder.classList.add('visible');
+      } else {
+        filterButtons.classList.remove('fixed');
+        placeholder.classList.remove('visible');
+      }
+    }
+
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
       const searchInput = document.getElementById("search-input");
@@ -1177,7 +1231,10 @@
       });
 
       // 스크롤 이벤트 리스너
-      window.addEventListener('scroll', handleScroll);
+      window.addEventListener('scroll', () => {
+        handleScroll();
+        handleFilterButtonsScroll();
+      });
 
       try {
         // 종목 정보 로드
@@ -1230,6 +1287,12 @@
         
         // 초기 레이아웃을 HOT으로 설정
         setLayout('hot');
+
+        // 필터 버튼 placeholder 추가
+        const filterButtons = document.querySelector('.filter-buttons');
+        const placeholder = document.createElement('div');
+        placeholder.className = 'filter-buttons-placeholder';
+        filterButtons.parentNode.insertBefore(placeholder, filterButtons);
 
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
