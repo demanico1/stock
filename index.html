@@ -74,8 +74,10 @@
       background: transparent;
       border: none;
       box-shadow: none;
-      will-change: position;
-      transition: transform 0.2s ease;
+      will-change: transform, position;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translateY(0);
+      opacity: 1;
     }
 
     .filter-buttons.fixed {
@@ -89,17 +91,21 @@
       box-shadow: var(--card-shadow);
       padding: 8px 16px;
       justify-content: center;
+      transform: translateY(0);
+      opacity: 1;
     }
 
     /* 필터 고정 시 컨텐츠 밀림 방지 */
     .filter-buttons-placeholder {
       display: none;
-      height: 54px; /* 필터 버튼 영역 높이 + 패딩 정확히 계산 */
+      height: 0;
       margin: 8px 0;
+      transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .filter-buttons-placeholder.visible {
       display: block;
+      height: 54px; /* 필터 버튼 영역 높이 + 패딩 정확히 계산 */
     }
 
     .filter-button {
@@ -160,6 +166,8 @@
       box-shadow: var(--card-shadow);
       border: 1px solid var(--border-color);
       position: relative;
+      transform: translateZ(0); /* 하드웨어 가속 활성화 */
+      will-change: transform; /* 성능 최적화 */
     }
 
     .news-container h3 {
@@ -1276,9 +1284,14 @@
       const originalTop = placeholder.offsetTop;
       const shouldBeFixed = window.scrollY > originalTop;
 
+      // placeholder 높이 정확히 계산
+      const buttonHeight = filterButtons.offsetHeight;
+      placeholder.style.height = buttonHeight + 'px';
+
       // 고정 해제는 즉시 처리
       if (!shouldBeFixed && filterButtons.classList.contains('fixed')) {
         clearTimeout(filterFixTimeout);
+        filterButtons.style.transform = 'translateY(0)';
         filterButtons.classList.remove('fixed');
         placeholder.classList.remove('visible');
       } 
@@ -1287,6 +1300,7 @@
         clearTimeout(filterFixTimeout);
         filterFixTimeout = setTimeout(() => {
           if (window.scrollY > originalTop) { // 0.5초 후에도 조건이 유지되는지 확인
+            filterButtons.style.transform = 'translateY(0)';
             filterButtons.classList.add('fixed');
             placeholder.classList.add('visible');
           }
