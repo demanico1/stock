@@ -1548,10 +1548,11 @@
         const data = await response.json();
         stockCache = {};
         
-        // 종목코드와 종목명을 매핑
+        // 종목코드와 종목명을 매핑 (A열: 종목코드, B열: 종목명)
         data.forEach(row => {
-          const code = row["종목코드"];
-          const name = row["종목명"];
+          const values = Object.values(row);
+          const code = values[0];  // A열
+          const name = values[1];  // B열
           if (code && name) {
             stockCache[code] = name;
           }
