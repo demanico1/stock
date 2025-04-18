@@ -1225,13 +1225,16 @@
         }
 
         const searchTerms = Array.isArray(keywords) ? keywords : keywords.split(" ");
-        const replaced = searchTerms.map(k => stockMap[k] || k);
         const results = data
           .filter(row => {
             const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
-            return replaced.every(k => 
-              title.toLowerCase().includes(k.toLowerCase())
-            );
+            const stockName = row["종목명"] || "";
+            return searchTerms.some(k => {
+              const stockNameFromCode = stockMap[k];
+              return title.toLowerCase().includes(k.toLowerCase()) || 
+                     stockName.toLowerCase().includes(k.toLowerCase()) ||
+                     (stockNameFromCode && stockName.includes(stockNameFromCode));
+            });
           })
           .map(row => ({ row }));
 
@@ -1240,16 +1243,20 @@
           const freshResults = freshData
             .filter(row => {
               const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
-              return replaced.every(k => 
-                title.toLowerCase().includes(k.toLowerCase())
-              );
+              const stockName = row["종목명"] || "";
+              return searchTerms.some(k => {
+                const stockNameFromCode = stockMap[k];
+                return title.toLowerCase().includes(k.toLowerCase()) || 
+                       stockName.toLowerCase().includes(k.toLowerCase()) ||
+                       (stockNameFromCode && stockName.includes(stockNameFromCode));
+              });
             })
             .map(row => ({ row }));
           
-          renderNewsCards(freshResults, "search-results-list", replaced);
+          renderNewsCards(freshResults, "search-results-list", searchTerms);
           updateSummary(freshResults);
         } else {
-          renderNewsCards(results, "search-results-list", replaced);
+          renderNewsCards(results, "search-results-list", searchTerms);
           updateSummary(results);
         }
 
@@ -1382,20 +1389,29 @@
       const searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
 
-      // 입력 이벤트에 디바운스 적용
+      // 입력 이벤트에 디바운스 적용 (100ms로 변경)
       const handleStockCodeInput = debounce((input) => {
+        input = input.trim();
         if (isStockCode(input)) {
           const stockName = stockMap[input];
           if (stockName) {
             searchInput.value = stockName;
+            // 변환 성공 시 시각적 피드백
+            searchInput.style.backgroundColor = '#e8f0fe';
+            setTimeout(() => {
+              searchInput.style.backgroundColor = '';
+            }, 200);
           }
         }
-      }, 500);
+      }, 100);
 
       // 입력 이벤트 리스너
       searchInput.addEventListener("input", (e) => {
         const input = e.target.value.trim();
-        handleStockCodeInput(input);
+        // 6자리 숫자인 경우에만 변환 시도
+        if (/^\d{6}$/.test(input)) {
+          handleStockCodeInput(input);
+        }
       });
 
       // 검색 이벤트
