@@ -805,10 +805,10 @@
         🔍 검색 중이에요!
       </div>
 
-      <!-- 검색 결과 요약 박스 추가 -->
+      <!-- 검색 결과 요약 박스 수정 -->
       <div id="summary" class="summary-box" style="display: none;">
-        <div><strong>최신 뉴스 시간:</strong><span id="latest-time">-</span></div>
-        <div><strong>최초 뉴스 시간:</strong><span id="earliest-time">-</span></div>
+        <div><strong>최신:</strong><span id="latest-time">-</span></div>
+        <div><strong>최초:</strong><span id="earliest-time">-</span></div>
         <div><strong>채널 수:</strong><span id="channel-count">-</span></div>
         <div><strong>뉴스 수:</strong><span id="news-count">-</span></div>
       </div>
@@ -929,60 +929,110 @@
     // 뉴스 카드 렌더링
     function renderNewsCards(data, targetElement, keywords = []) {
       const list = document.getElementById(targetElement);
-      const loadingElement = document.getElementById('hot-news-loading');
-      const skeletonElement = document.getElementById('hot-news-skeleton');
       
-      // 로딩 및 스켈레톤 UI 제거
-      if (loadingElement) loadingElement.style.display = 'none';
-      if (skeletonElement) skeletonElement.style.display = 'none';
-      
-      list.innerHTML = "";
+      if (targetElement === 'search-results-list') {
+        // DB 검색 결과 렌더링
+        list.innerHTML = "";
 
-      if (!data.length) {
-        list.innerHTML = `
-          <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-            😢 표시할 뉴스가 없습니다
-          </div>
-        `;
-        return;
+        if (!data.length) {
+          list.innerHTML = `
+            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+              😢 표시할 뉴스가 없습니다
+            </div>
+          `;
+          return;
+        }
+
+        data.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "news-card";
+          
+          const title = item.row["뉴스 제목"] || "";
+          const time = item.row["시간"] || "";
+          const channelName = item.row["채널명"] || "";
+          const stockName = item.row["종목명"] || "";
+          const link = item.row["링크"] || "";
+          
+          // 시간 포맷팅
+          const timeDisplay = parseTime(time);
+          
+          const safeLink = !link || link.includes("stockinfo7.com")
+            ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
+            : link;
+
+          const highlightedTitle = keywords.length 
+            ? highlight(title, keywords)
+            : title;
+
+          card.innerHTML = `
+            <div class="news-title">${highlightedTitle}</div>
+            <div class="news-info">🕒 ${timeDisplay}</div>
+            <div class="news-info">📡 ${channelName}</div>
+            <div class="news-info">🏢 ${stockName}</div>
+            <div class="news-link" style="display:flex; gap:8px; align-items:center;">
+              <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
+              ${(!link || link.includes("stockinfo7.com")) ? 
+                `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
+            </div>
+          `;
+
+          list.appendChild(card);
+        });
+      } else {
+        // HOT 뉴스 렌더링 (기존 코드 유지)
+        const loadingElement = document.getElementById('hot-news-loading');
+        const skeletonElement = document.getElementById('hot-news-skeleton');
+        
+        if (loadingElement) loadingElement.style.display = 'none';
+        if (skeletonElement) skeletonElement.style.display = 'none';
+        
+        list.innerHTML = "";
+
+        if (!data.length) {
+          list.innerHTML = `
+            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+              😢 표시할 뉴스가 없습니다
+            </div>
+          `;
+          return;
+        }
+
+        data.forEach(item => {
+          const card = document.createElement("div");
+          card.className = `news-card ${item.grade || ""}`;
+          
+          const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
+          const latestTime = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
+          const firstTime = item.row["최초 뉴스 시간"] || "";
+          const newsCount = item.row["관련뉴스 수"] || "0";
+          const channelCount = item.row["언급 채널 수"] || "0";
+          const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
+          
+          const safeLink = !link || link.includes("stockinfo7.com")
+            ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
+            : link;
+
+          const highlightedTitle = keywords.length 
+            ? highlight(title, keywords)
+            : title;
+
+          card.innerHTML = `
+            <div class="news-title">${highlightedTitle}</div>
+            <div class="news-info">🕒 최신 ${latestTime}${firstTime ? ` • 최초 ${firstTime}` : ''}</div>
+            <div class="news-info">
+              📡 관련뉴스 ${newsCount}건 / 언급채널 ${channelCount}개
+              ${item.score ? `<span style="font-size:11px; color:#888;">(${item.score}점)</span>` : ''}
+            </div>
+            <div class="news-link" style="display:flex; gap:8px; align-items:center;">
+              <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
+              ${(!link || link.includes("stockinfo7.com")) ? 
+                `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
+            </div>
+          `;
+
+          list.appendChild(card);
+        });
       }
-
-      data.forEach(item => {
-        const card = document.createElement("div");
-        card.className = `news-card ${item.grade || ""}`;
-        
-        const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
-        const latestTime = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
-        const firstTime = item.row["최초 뉴스 시간"] || "";
-        const newsCount = item.row["관련뉴스 수"] || "0";
-        const channelCount = item.row["언급 채널 수"] || "0";
-        const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
-        const originalLink = item.row["링크"] || "";
-        
-        const safeLink = !link || link.includes("stockinfo7.com")
-          ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
-          : link;
-
-        const highlightedTitle = keywords.length 
-          ? highlight(title, keywords)
-          : title;
-
-        card.innerHTML = `
-          <div class="news-title">${highlightedTitle}</div>
-          <div class="news-info">🕒 최신 ${latestTime}${firstTime ? ` • 최초 ${firstTime}` : ''}</div>
-          <div class="news-info">
-            📡 관련뉴스 ${newsCount}건 / 언급채널 ${channelCount}개
-            ${item.score ? `<span style="font-size:11px; color:#888;">(${item.score}점)</span>` : ''}
-          </div>
-          <div class="news-link" style="display:flex; gap:8px; align-items:center;">
-            <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
-            ${(!link || link.includes("stockinfo7.com")) ? 
-              `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
-          </div>
-        `;
-
-        list.appendChild(card);
-      });
     }
 
     // 필터 설정 함수 수정
@@ -1063,7 +1113,7 @@
       }
     }
 
-    // 검색 결과 요약 업데이트 함수
+    // 검색 결과 요약 업데이트 함수 수정
     function updateSummary(matches) {
       const times = [];
       const channels = new Set();
@@ -1071,11 +1121,11 @@
       // 뉴스에서 시간 및 채널 수를 수집
       matches.forEach(m => {
         try {
-          const time = m.row["시간"] || m.row["최신 뉴스 시간"];
+          const time = m.row["시간"];
           if (time) {
             times.push(time);
           }
-          const channel = m.row["채널"] || m.row["언급 채널"];
+          const channel = m.row["채널명"];
           if (channel) {
             channels.add(channel);
           }
