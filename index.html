@@ -637,9 +637,47 @@
         opacity: 1;
       }
     }
+
+    /* 맨 위로 버튼 스타일 */
+    .scroll-to-top {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.8;
+      transition: all 0.3s;
+      z-index: 1000;
+      box-shadow: var(--card-shadow);
+      font-size: 20px;
+    }
+
+    .scroll-to-top:hover {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+      .scroll-to-top {
+        width: 36px;
+        height: 36px;
+        bottom: 16px;
+        right: 16px;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- 맨 위로 버튼 추가 -->
+  <button class="scroll-to-top" id="scrollToTop" title="맨 위로">↑</button>
+
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
     <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
@@ -1104,6 +1142,16 @@
       });
     }
 
+    // 맨 위로 버튼 관련 함수
+    function handleScroll() {
+      const scrollButton = document.getElementById('scrollToTop');
+      if (window.scrollY > 200) {
+        scrollButton.style.display = 'flex';
+      } else {
+        scrollButton.style.display = 'none';
+      }
+    }
+
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
       const searchInput = document.getElementById("search-input");
@@ -1117,6 +1165,18 @@
           handleSearch();
         }
       });
+
+      // 맨 위로 버튼 이벤트 리스너
+      const scrollButton = document.getElementById('scrollToTop');
+      scrollButton.addEventListener('click', () => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+
+      // 스크롤 이벤트 리스너
+      window.addEventListener('scroll', handleScroll);
 
       try {
         // 종목 정보 로드
