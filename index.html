@@ -735,6 +735,57 @@
         right: 16px;
       }
     }
+
+    /* 토스트 알림 스타일 추가 */
+    .toast-notification {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--card-bg);
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 1000;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    .toast-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast-icon {
+      font-size: 16px;
+    }
+
+    .toast-message {
+      color: var(--text-color);
+      font-size: 14px;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 14px;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -847,6 +898,8 @@
     let lastDBUpdate = null;
     let currentFilter = 'all';  // 필터 전역 변수 추가
     const DB_UPDATE_INTERVAL = 60000; // 1분
+    let lastDataTimestamp = null;
+    const UPDATE_CHECK_INTERVAL = 15000; // 15초마다 업데이트 체크
 
     // 점수 계산
     function calculateScore(row) {
@@ -1300,15 +1353,89 @@
         }
     }
 
-    // 주기적 데이터 업데이트
+    // 토스트 알림 표시 함수
+    function showToastNotification(message) {
+      // 기존 알림이 있다면 제거
+      const existingToast = document.querySelector('.toast-notification');
+      if (existingToast) {
+        existingToast.remove();
+      }
+
+      // 새 알림 생성
+      const toast = document.createElement('div');
+      toast.className = 'toast-notification';
+      toast.innerHTML = `
+        <div class="toast-content">
+          <span class="toast-icon">🔔</span>
+          <span class="toast-message">${message}</span>
+          <button class="toast-close" onclick="this.parentElement.parentElement.remove()">✕</button>
+        </div>
+      `;
+
+      // 5초 후 자동 제거
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+
+      document.body.appendChild(toast);
+    }
+
+    // 데이터 변경 확인 함수
+    async function checkForNewData() {
+      try {
+        const dbSheet = await findDbSheet();
+        const response = await fetch(`/sheet/${dbSheet.gid}/metadata`);
+        const metadata = await response.json();
+        
+        if (!lastDataTimestamp || metadata.lastModified > lastDataTimestamp) {
+          const newData = await loadDBData(true);
+          const newItemsCount = processNewData(newData);
+          
+          if (newItemsCount > 0) {
+            showToastNotification(`${newItemsCount}개의 새로운 뉴스가 추가되었습니다`);
+          }
+          
+          lastDataTimestamp = metadata.lastModified;
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('데이터 확인 중 오류:', error);
+        return false;
+      }
+    }
+
+    // 새로운 데이터 처리 함수
+    function processNewData(newData) {
+      if (!newData || !Array.isArray(newData)) return 0;
+
+      const currentIds = new Set(currentData.map(item => item.row.id));
+      const newItems = newData.filter(item => !currentIds.has(item.id));
+      
+      if (newItems.length === 0) return 0;
+
+      // 새로운 아이템 점수 계산 및 등급 할당
+      const newItemsWithScore = newItems.map(row => ({
+        row,
+        score: calculateScore(row),
+        originalIndex: currentData.length
+      }));
+
+      const updatedData = assignGrade([...currentData, ...newItemsWithScore]);
+      
+      // 현재 필터에 맞게 데이터 업데이트 및 렌더링
+      currentData = updatedData;
+      renderFilteredData(currentData);
+      
+      return newItems.length;
+    }
+
+    // 주기적 업데이트 시작 함수 수정
     function startPeriodicUpdate() {
       setInterval(async () => {
-        try {
-          await loadDBData(true);
-        } catch (error) {
-          console.error('주기적 업데이트 실패:', error);
-        }
-      }, DB_UPDATE_INTERVAL);
+        await checkForNewData();
+      }, UPDATE_CHECK_INTERVAL);
     }
 
     // 테마 관련 함수
