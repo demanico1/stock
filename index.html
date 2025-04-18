@@ -70,30 +70,31 @@
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
-      padding: 8px;
+      padding: 8px 16px;
       background: transparent;
       border: none;
       box-shadow: none;
-      transition: all 0.3s ease;
+      will-change: position;
+      transition: transform 0.2s ease;
     }
 
     .filter-buttons.fixed {
       position: fixed;
-      top: 44px; /* 레이아웃 컨트롤 높이 + 패딩 */
+      top: 52px; /* 레이아웃 컨트롤 높이 + 여유 간격 */
       left: 0;
       right: 0;
       z-index: 999;
       background: var(--card-bg);
       border-bottom: 1px solid var(--border-color);
       box-shadow: var(--card-shadow);
-      justify-content: center;
-      padding: 8px;
+      padding: 8px 16px;
     }
 
     /* 필터 고정 시 컨텐츠 밀림 방지 */
     .filter-buttons-placeholder {
       display: none;
-      height: 52px; /* 필터 버튼 영역 높이 + 패딩 */
+      height: 54px; /* 필터 버튼 영역 높이 + 패딩 정확히 계산 */
+      margin: 8px 0;
     }
 
     .filter-buttons-placeholder.visible {
@@ -104,18 +105,18 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 12px !important;
-      border-radius: 20px !important;
+      height: 32px;
+      padding: 6px 16px !important;
+      border-radius: 16px !important;
       background: var(--card-bg) !important;
       border: 1px solid var(--border-color) !important;
       color: var(--text-color);
-      font-size: 11px;
+      font-size: 12px;
       cursor: pointer;
       transition: all 0.2s ease;
       position: relative;
       overflow: hidden;
       margin: 0 !important;
-      height: auto !important;
       min-width: auto !important;
     }
 
@@ -477,8 +478,18 @@
       }
 
       .filter-buttons.fixed {
-        top: 40px;
-        padding: 6px;
+        top: 48px;
+        padding: 6px 8px;
+      }
+
+      .filter-buttons-placeholder {
+        height: 48px;
+      }
+
+      .filter-button {
+        height: 28px;
+        padding: 4px 12px !important;
+        font-size: 11px;
       }
     }
 
@@ -1182,6 +1193,18 @@
       }
     }
 
+    // 스크롤 이벤트 쓰로틀링 함수
+    function throttle(func, limit) {
+      let inThrottle;
+      return function(...args) {
+        if (!inThrottle) {
+          func.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      }
+    }
+
     // 필터 버튼 고정 관련 함수
     function handleFilterButtonsScroll() {
       const filterButtons = document.querySelector('.filter-buttons');
@@ -1190,18 +1213,21 @@
       
       // HOT 또는 split 레이아웃일 때만 동작
       if (layout === 'db') {
-        filterButtons.classList.remove('fixed');
-        placeholder.classList.remove('visible');
+        if (filterButtons.classList.contains('fixed')) {
+          filterButtons.classList.remove('fixed');
+          placeholder.classList.remove('visible');
+        }
         return;
       }
 
       const rect = filterButtons.getBoundingClientRect();
       const originalTop = placeholder.offsetTop;
+      const shouldBeFixed = window.scrollY > originalTop;
 
-      if (window.scrollY > originalTop) {
+      if (shouldBeFixed && !filterButtons.classList.contains('fixed')) {
         filterButtons.classList.add('fixed');
         placeholder.classList.add('visible');
-      } else {
+      } else if (!shouldBeFixed && filterButtons.classList.contains('fixed')) {
         filterButtons.classList.remove('fixed');
         placeholder.classList.remove('visible');
       }
@@ -1230,11 +1256,11 @@
         });
       });
 
-      // 스크롤 이벤트 리스너
-      window.addEventListener('scroll', () => {
+      // 스크롤 이벤트 리스너에 쓰로틀 적용
+      window.addEventListener('scroll', throttle(() => {
         handleScroll();
         handleFilterButtonsScroll();
-      });
+      }, 100));
 
       try {
         // 종목 정보 로드
