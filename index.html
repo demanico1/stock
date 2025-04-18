@@ -1148,11 +1148,6 @@
           updateSummary(results);
         }
 
-        // 검색어가 있으면 DB 영역으로 레이아웃 변경
-        if (!initialSearch) {
-          setLayout('db');
-        }
-
       } catch (error) {
         console.error("검색 중 오류:", error);
         document.getElementById("search-results-list").innerHTML = `
@@ -1262,6 +1257,7 @@
     }
 
     // 필터 버튼 고정 관련 함수
+    let filterFixTimeout;
     function handleFilterButtonsScroll() {
       const filterButtons = document.querySelector('.filter-buttons');
       const placeholder = document.querySelector('.filter-buttons-placeholder');
@@ -1280,12 +1276,21 @@
       const originalTop = placeholder.offsetTop;
       const shouldBeFixed = window.scrollY > originalTop;
 
-      if (shouldBeFixed && !filterButtons.classList.contains('fixed')) {
-        filterButtons.classList.add('fixed');
-        placeholder.classList.add('visible');
-      } else if (!shouldBeFixed && filterButtons.classList.contains('fixed')) {
+      // 고정 해제는 즉시 처리
+      if (!shouldBeFixed && filterButtons.classList.contains('fixed')) {
+        clearTimeout(filterFixTimeout);
         filterButtons.classList.remove('fixed');
         placeholder.classList.remove('visible');
+      } 
+      // 고정은 0.5초 딜레이 후 처리
+      else if (shouldBeFixed && !filterButtons.classList.contains('fixed')) {
+        clearTimeout(filterFixTimeout);
+        filterFixTimeout = setTimeout(() => {
+          if (window.scrollY > originalTop) { // 0.5초 후에도 조건이 유지되는지 확인
+            filterButtons.classList.add('fixed');
+            placeholder.classList.add('visible');
+          }
+        }, 500);
       }
     }
 
