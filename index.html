@@ -220,10 +220,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
   searchBtn.addEventListener("click", handleStockCodeConversionAndSearch);
 
-  // 초기 주식 맵 로드
-  google.script.run.withSuccessHandler(map => {
-    stockMap = map;
-  }).getStockMap();
+  // 종목 정보 로드
+  fetch("/sheets")
+    .then(res => res.json())
+    .then(sheets => {
+      const stockSheet = sheets.find(s => s.name === "종목정보");
+      if (!stockSheet) {
+        console.error("종목정보 시트를 찾을 수 없습니다.");
+        return;
+      }
+
+      return fetch(`/sheet/${stockSheet.gid}`);
+    })
+    .then(res => res.json())
+    .then(data => {
+      stockMap = {};
+      data.forEach(row => {
+        const code = row["종목코드"];
+        const name = row["종목명"];
+        if (code && name) {
+          stockMap[code] = name;
+        }
+      });
+      console.log("종목 정보 로드 완료:", Object.keys(stockMap).length, "개");
+    })
+    .catch(err => {
+      console.error("stockMap 로딩 중 오류 발생:", err);
+    });
 });
 
 // 검색 기능
