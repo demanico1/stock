@@ -1386,18 +1386,28 @@
     async function checkForNewData() {
       try {
         const dbSheet = await findDbSheet();
-        const response = await fetch(`/sheet/${dbSheet.gid}/metadata`);
-        const metadata = await response.json();
+        const newData = await loadDBData(true);
         
-        if (!lastDataTimestamp || metadata.lastModified > lastDataTimestamp) {
-          const newData = await loadDBData(true);
-          const newItemsCount = processNewData(newData);
+        if (!currentData || !Array.isArray(currentData)) {
+          currentData = newData;
+          return false;
+        }
+
+        // 새로운 데이터가 있는지 확인
+        const currentIds = new Set(currentData.map(item => item.row.id));
+        const newItems = newData.filter(item => !currentIds.has(item.id));
+        
+        if (newItems.length > 0) {
+          const newItemsWithScore = newItems.map(row => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: currentData.length
+          }));
+
+          currentData = assignGrade([...currentData, ...newItemsWithScore]);
+          renderFilteredData(currentData);
           
-          if (newItemsCount > 0) {
-            showToastNotification(`${newItemsCount}개의 새로운 뉴스가 추가되었습니다`);
-          }
-          
-          lastDataTimestamp = metadata.lastModified;
+          showToastNotification(`${newItems.length}개의 새로운 뉴스가 추가되었습니다`);
           return true;
         }
         return false;
@@ -1405,31 +1415,6 @@
         console.error('데이터 확인 중 오류:', error);
         return false;
       }
-    }
-
-    // 새로운 데이터 처리 함수
-    function processNewData(newData) {
-      if (!newData || !Array.isArray(newData)) return 0;
-
-      const currentIds = new Set(currentData.map(item => item.row.id));
-      const newItems = newData.filter(item => !currentIds.has(item.id));
-      
-      if (newItems.length === 0) return 0;
-
-      // 새로운 아이템 점수 계산 및 등급 할당
-      const newItemsWithScore = newItems.map(row => ({
-        row,
-        score: calculateScore(row),
-        originalIndex: currentData.length
-      }));
-
-      const updatedData = assignGrade([...currentData, ...newItemsWithScore]);
-      
-      // 현재 필터에 맞게 데이터 업데이트 및 렌더링
-      currentData = updatedData;
-      renderFilteredData(currentData);
-      
-      return newItems.length;
     }
 
     // 주기적 업데이트 시작 함수 수정
