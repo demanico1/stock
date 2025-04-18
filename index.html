@@ -382,7 +382,7 @@
       .container {
         flex-direction: column;
         gap: 12px;
-        margin-top: 55px !important;
+        margin-top: 45px !important;
       }
 
       .container::after {
@@ -396,6 +396,7 @@
       }
 
       .filter-area {
+        min-height: 0;
         padding: 2px 4px;
       }
 
@@ -410,9 +411,10 @@
         height: 10px;
       }
 
-      .news-container {
-        height: auto;
-        margin-top: 0;
+      #hot-news-loading,
+      #hot-news-skeleton,
+      .news-list {
+        margin-top: 0 !important;
       }
 
       .search-area {
@@ -485,8 +487,8 @@
       }
 
       .layout-controls {
+        min-height: 40px;
         padding: 4px;
-        gap: 4px;
       }
 
       .filter-buttons {
@@ -532,11 +534,11 @@
       }
 
       .container {
-        margin-top: 50px !important;
+        margin-top: 40px !important;
       }
 
       .layout-controls {
-        padding: 2px;
+        min-height: 36px;
       }
     }
 
