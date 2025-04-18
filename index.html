@@ -1632,6 +1632,10 @@
       }, 100));
 
       try {
+        // 시트 목록 먼저 로드
+        const sheetsResponse = await fetch("/sheets");
+        const sheets = await sheetsResponse.json();
+
         // 종목 정보 로드
         await loadStockData();
 
