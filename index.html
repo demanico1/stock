@@ -16,22 +16,92 @@
 
     .container {
       display: flex;
-      flex-direction: column;
-      max-width: 1200px;
+      gap: 24px;
+      max-width: 1400px;
       margin: 0 auto;
     }
 
-    .search-area {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
+    /* 왼쪽 패널 */
+    .left-panel {
+      width: 250px;
+      flex-shrink: 0;
+    }
+
+    .filter-buttons {
       background: white;
-      padding: 12px;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+    }
+
+    .filter-buttons h3 {
+      margin-bottom: 12px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .filter-buttons button {
+      width: 100%;
+      padding: 8px 16px;
+      margin-bottom: 8px;
+      border-radius: 20px;
+      border: 1px solid #ddd;
+      background: white;
+      cursor: pointer;
+      font-size: 0.9em;
+      transition: all 0.2s;
+    }
+
+    .filter-buttons button:last-child {
+      margin-bottom: 0;
+    }
+
+    .filter-buttons button.active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+
+    .news-container {
+      background: white;
+      padding: 16px;
       border-radius: 8px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-    .search-area input {
+    .news-container h3 {
+      margin-bottom: 12px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    /* 오른쪽 패널 */
+    .right-panel {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .search-area {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+    }
+
+    .search-area h3 {
+      margin-bottom: 12px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .search-form input {
       flex: 1;
       padding: 8px 12px;
       border-radius: 4px;
@@ -39,7 +109,7 @@
       font-size: 13px;
     }
 
-    .search-area button {
+    .search-form button {
       padding: 8px 16px;
       border: none;
       background: #d9534f;
@@ -49,35 +119,25 @@
       min-width: 80px;
     }
 
-    .search-area button:disabled {
+    .search-form button:disabled {
       background: #999;
       cursor: not-allowed;
     }
 
-    .filter-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-
-    .filter-buttons button {
-      flex: 1;
-      padding: 8px 16px;
-      border-radius: 20px;
-      border: 1px solid #ddd;
+    .search-results {
       background: white;
-      cursor: pointer;
-      font-size: 0.9em;
-      transition: all 0.2s;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-    .filter-buttons button.active {
-      background: #007bff;
-      color: white;
-      border-color: #007bff;
+    .search-results h3 {
+      margin-bottom: 12px;
+      color: #333;
+      font-size: 14px;
     }
 
+    /* 뉴스 카드 스타일 */
     .news-list {
       display: flex;
       flex-direction: column;
@@ -144,29 +204,6 @@
       background: #fff8b3;
     }
 
-    @media (min-width: 768px) {
-      .container {
-        flex-direction: row;
-        gap: 24px;
-      }
-
-      .left-panel {
-        width: 200px;
-      }
-
-      .right-panel {
-        flex: 1;
-      }
-
-      .filter-buttons {
-        flex-direction: column;
-      }
-
-      .filter-buttons button {
-        width: 100%;
-      }
-    }
-
     .refresh-notification {
       position: fixed;
       bottom: 20px;
@@ -178,7 +215,7 @@
       animation: slideIn 0.3s ease-out;
       z-index: 1000;
     }
-    
+
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
@@ -187,29 +224,43 @@
 </head>
 <body>
   <div class="container">
-    <!-- 왼쪽: 필터 버튼 -->
+    <!-- 왼쪽: 필터 + HOT 뉴스 -->
     <div class="left-panel">
       <div class="filter-buttons">
+        <h3>📊 필터</h3>
         <button data-type="all" class="active">전체</button>
         <button data-type="top">매우 중요</button>
         <button data-type="mid">중요</button>
         <button data-type="low">보통</button>
       </div>
+
+      <div class="news-container">
+        <h3>📰 HOT 뉴스</h3>
+        <div class="news-list" id="hot-news-list">
+          <!-- HOT 뉴스 카드가 여기에 표시됩니다 -->
+        </div>
+      </div>
     </div>
 
-    <!-- 오른쪽: 검색창 + 뉴스 -->
+    <!-- 오른쪽: 검색 + 검색결과 -->
     <div class="right-panel">
       <div class="search-area">
-        <input type="text" placeholder="검색어를 입력하세요" id="search-input">
-        <button id="search-button">검색</button>
+        <h3>🔍 검색</h3>
+        <div class="search-form">
+          <input type="text" placeholder="검색어를 입력하세요" id="search-input">
+          <button id="search-button">검색</button>
+        </div>
       </div>
 
       <div id="searching-text" class="spinner-blink" style="display:none;">
         🔍 검색 중이에요!
       </div>
 
-      <div class="news-list" id="news-list">
-        <!-- 뉴스 카드가 여기에 표시됩니다 -->
+      <div class="search-results">
+        <h3>📑 검색 결과</h3>
+        <div class="news-list" id="search-results-list">
+          <!-- 검색 결과가 여기에 표시됩니다 -->
+        </div>
       </div>
     </div>
   </div>
@@ -231,15 +282,16 @@
       return score;
     }
 
-    // 등급 분류
+    // 등급 분류 (점수만 계산, 필터링은 하지 않음)
     function assignGrade(rowsWithScore) {
-      const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
-      const total = sorted.length;
+      const total = rowsWithScore.length;
       
-      return sorted.map((item, idx) => {
-        const rate = idx / total;
-        let grade = "";
+      return rowsWithScore.map(item => {
+        const sortedScores = [...rowsWithScore].sort((a, b) => b.score - a.score);
+        const position = sortedScores.findIndex(x => x.score === item.score);
+        const rate = position / total;
         
+        let grade = "";
         if (rate < 0.1) grade = "top";
         else if (rate < 0.3) grade = "mid";
         else if (rate < 0.5) grade = "low";
@@ -269,8 +321,8 @@
     }
 
     // 뉴스 카드 렌더링
-    function renderNewsCards(data, keywords = []) {
-      const list = document.getElementById("news-list");
+    function renderNewsCards(data, targetElement, keywords = []) {
+      const list = document.getElementById(targetElement);
       list.innerHTML = "";
 
       if (!data.length) {
@@ -282,20 +334,15 @@
         return;
       }
 
-      console.log('렌더링할 뉴스 수:', data.length); // 디버깅: 렌더링 확인
-
-      data.forEach((item, index) => {
+      data.forEach(item => {
         const card = document.createElement("div");
         card.className = `news-card ${item.grade || ""}`;
         
-        // 필드명 체크 개선
-        const title = item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "";
-        const time = item.row["시간"] || item.row["최신 뉴스 시간"] || "";
+        const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
+        const time = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
         const newsCount = item.row["관련뉴스 수"] || "0";
         const channelCount = item.row["언급 채널 수"] || "0";
-        const link = item.row["링크"] || item.row["최신 뉴스 링크"] || "";
-
-        console.log(`뉴스 ${index + 1}:`, { title, time }); // 디버깅: 각 뉴스 정보 확인
+        const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
         
         const safeLink = !link || link.includes("stockinfo7.com")
           ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
@@ -324,6 +371,22 @@
       });
     }
 
+    // 필터링된 데이터 렌더링
+    function renderFilteredData(data) {
+      if (currentFilter === "all") {
+        // 전체: 원본 순서 유지, 점수와 등급만 표시
+        renderNewsCards(data, "hot-news-list");
+        return;
+      }
+
+      // 필터링된 데이터: 해당 등급만 표시하고 점수순 정렬
+      const filtered = data
+        .filter(item => item.grade === currentFilter)
+        .sort((a, b) => b.score - a.score);
+      
+      renderNewsCards(filtered, "hot-news-list");
+    }
+
     // 검색 처리
     async function handleSearch() {
       const input = document.getElementById("search-input").value.trim();
@@ -337,62 +400,25 @@
       searchButton.textContent = "검색 중...";
       searchingText.style.display = "block";
 
-      const fetchOptions = {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      };
-
       try {
         const sheetName = getTodayDbSheetName();
-        console.log('검색 시트:', sheetName); // 디버깅: 시트명 확인
-
-        const response = await fetch(`/sheet/${sheetName}`, fetchOptions);
+        const response = await fetch(`/sheet/${sheetName}`);
         const data = await response.json();
         
-        console.log('검색 데이터 수:', data.length); // 디버깅: 데이터 확인
-        
         const replaced = keywords.map(k => stockMap[k] || k);
-        console.log('검색 키워드:', replaced); // 디버깅: 변환된 키워드 확인
-
-        // 검색 로직 개선
         const results = data
           .filter(row => {
-            // 제목 필드 확인
-            const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
-            console.log('검색 대상 제목:', title); // 디버깅: 제목 확인
-            
-            // 키워드 매칭 확인
-            const matches = replaced.every(k => 
+            const title = row["뉴스 제목"] || "";
+            return replaced.every(k => 
               title.toLowerCase().includes(k.toLowerCase())
             );
-            
-            if (matches) {
-              console.log('매칭된 제목:', title); // 디버깅: 매칭 결과 확인
-            }
-            
-            return matches;
           })
           .map(row => ({ row }));
 
-        console.log('검색 결과 수:', results.length); // 디버깅: 결과 수 확인
-
-        if (results.length === 0) {
-          document.getElementById("news-list").innerHTML = `
-            <div style="text-align:center; padding: 20px; color: #888;">
-              😢 검색 결과가 없습니다<br>
-              검색어: ${keywords.join(", ")}
-            </div>
-          `;
-        } else {
-          renderNewsCards(results, replaced);
-        }
-
+        renderNewsCards(results, "search-results-list", replaced);
       } catch (error) {
         console.error("검색 중 오류:", error);
-        document.getElementById("news-list").innerHTML = `
+        document.getElementById("search-results-list").innerHTML = `
           <div style="text-align:center; padding: 20px; color: #888;">
             😢 검색 중 오류가 발생했습니다<br>
             ${error.message}
@@ -405,112 +431,11 @@
       }
     }
 
-    // 필터링된 데이터 렌더링
-    function renderFilteredData(data) {
-      if (currentFilter === "all") {
-        // 전체 버튼: 원본 시트 순서 유지
-        renderNewsCards(data);
-        return;
-      }
-
-      // 나머지 버튼들: 점수순 정렬 후 필터링
-      const filtered = data
-        .filter(item => item.grade === currentFilter)
-        .sort((a, b) => b.score - a.score);  // 점수 높은 순
-      
-      renderNewsCards(filtered);
-    }
-
-    // 데이터 새로고침 함수
-    async function refreshData(silent = true) {
-      const fetchOptions = {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      };
-
-      try {
-        // HOT 시트 데이터 새로고침
-        const sheetsResponse = await fetch("/sheets", fetchOptions);
-        const sheets = await sheetsResponse.json();
-        const hotSheet = sheets.find(s => s.name.includes("HOT"));
-        
-        if (hotSheet) {
-          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`, fetchOptions);
-          const hotData = await hotResponse.json();
-          
-          // 원본 데이터 순서 보존을 위해 인덱스 추가
-          const newData = hotData.map((row, index) => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: index
-          }));
-          
-          // 데이터 변경 확인
-          const oldTitles = currentData.map(item => item.row["대표 뉴스 제목"]).join("|");
-          const newTitles = newData.map(item => item.row["대표 뉴스 제목"]).join("|");
-          
-          if (oldTitles !== newTitles) {
-            currentData = assignGrade(newData);
-            renderFilteredData(currentData);
-            
-            if (!silent) {
-              // 새로운 데이터가 있을 때만 알림
-              const notification = document.createElement("div");
-              notification.className = "refresh-notification";
-              notification.textContent = "🔄 새로운 뉴스가 업데이트되었습니다";
-              document.body.appendChild(notification);
-              
-              // 3초 후 알림 제거
-              setTimeout(() => {
-                notification.remove();
-              }, 3000);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("데이터 새로고침 중 오류:", error);
-      }
-    }
-
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
       const searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
       const filterButtons = document.querySelectorAll(".filter-buttons button");
-
-      // 스타일 추가
-      const style = document.createElement("style");
-      style.textContent = `
-        .refresh-notification {
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          background: rgba(0, 0, 0, 0.8);
-          color: white;
-          padding: 12px 20px;
-          border-radius: 8px;
-          animation: slideIn 0.3s ease-out;
-          z-index: 1000;
-        }
-        
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `;
-      document.head.appendChild(style);
-
-      // API 요청 옵션
-      const fetchOptions = {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      };
 
       // 검색 이벤트
       searchButton.addEventListener("click", handleSearch);
@@ -533,12 +458,12 @@
 
       try {
         // 종목 정보 로드
-        const sheetsResponse = await fetch("/sheets", fetchOptions);
+        const sheetsResponse = await fetch("/sheets");
         const sheets = await sheetsResponse.json();
         const stockSheet = sheets.find(s => s.name === "종목정보");
         
         if (stockSheet) {
-          const stockResponse = await fetch(`/sheet/${stockSheet.gid}`, fetchOptions);
+          const stockResponse = await fetch(`/sheet/${stockSheet.gid}`);
           const stockData = await stockResponse.json();
           
           stockMap = {};
@@ -554,22 +479,22 @@
         // HOT 시트 데이터 로드
         const hotSheet = sheets.find(s => s.name.includes("HOT"));
         if (hotSheet) {
-          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`, fetchOptions);
+          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`);
           const hotData = await hotResponse.json();
           
+          // 원본 순서 유지하면서 점수만 계산
           currentData = hotData.map((row, index) => ({
             row,
             score: calculateScore(row),
             originalIndex: index
           }));
           
+          // 등급 분류 (필터링 없이)
           currentData = assignGrade(currentData);
+          
+          // 초기 렌더링 (전체 - 원본 순서)
           renderFilteredData(currentData);
         }
-
-        // 1분마다 자동 새로고침
-        setInterval(refreshData, 60000);
-
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
       }
