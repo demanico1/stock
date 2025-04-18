@@ -316,10 +316,11 @@
       searchingText.style.display = "block";
 
       try {
-        const sheetName = getTodayDbSheetName();
+        const sheetName = getTodayDbSheetName();  // 오늘 날짜 기준 DB 시트 이름
         const response = await fetch(`/sheet/${sheetName}`);
         const data = await response.json();
         
+        // DB 시트 데이터에서 검색 처리
         const replaced = keywords.map(k => stockMap[k] || k);
         const results = data
           .filter(row => {
@@ -330,7 +331,8 @@
           })
           .map(row => ({ row }));
 
-        renderNewsCards(results, replaced);
+        renderNewsCards(results, replaced);  // 검색 결과 뉴스 렌더링 (DB 시트만)
+
       } catch (error) {
         console.error("검색 중 오류:", error);
         document.getElementById("news-list").innerHTML = `
