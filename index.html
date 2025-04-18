@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="dark">
+<html lang="ko" data-theme="dark" data-layout="split">
 <head>
   <meta charset="UTF-8">
   <title>디마니코 심플 뉴스</title>
@@ -53,6 +53,7 @@
       max-width: 1400px;
       margin: 0 auto;
       position: relative;
+      margin-top: 60px;
     }
 
     .container::after {
@@ -73,44 +74,59 @@
     }
 
     .filter-buttons {
-      background: var(--card-bg);
-      padding: 16px;
-      border-radius: 8px;
-      box-shadow: var(--card-shadow);
-      margin-bottom: 16px;
-      border: 1px solid var(--border-color);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 8px;
+      background: transparent;
+      border: none;
+      box-shadow: none;
     }
 
     .filter-buttons h3 {
-      margin-bottom: 12px;
-      color: var(--text-color);
-      font-size: 14px;
-    }
-
-    .filter-buttons button {
       width: 100%;
-      padding: 8px 12px;
       margin-bottom: 8px;
-      border-radius: 20px;
-      border: 1px solid var(--border-color);
-      background: var(--card-bg);
-      color: var(--text-color);
-      cursor: pointer;
-      font-size: 0.9em;
-      transition: all 0.2s;
+      font-size: 12px;
+    }
+
+    .filter-button {
+      width: auto !important;
+      height: 24px;
+      min-width: 24px;
+      padding: 0 !important;
+      border-radius: 50% !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border: none !important;
+      margin: 0 !important;
+    }
+
+    .filter-button span {
+      position: absolute;
+      bottom: -20px;
+      left: 50%;
+      transform: translateX(-50%);
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-size: 10px;
+      color: var(--text-secondary);
     }
 
-    .filter-buttons button:last-child {
-      margin-bottom: 0;
-    }
+    .filter-button.all { background: #8B0000 !important; }
+    .filter-button.top { background: #FF0000 !important; }
+    .filter-button.mid { background: #FFA500 !important; }
+    .filter-button.low { background: #FFD700 !important; }
 
-    .filter-buttons button.active {
-      background: #007bff;
-      color: white;
-      border-color: #0056b3;
+    .filter-button.active::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      border: 2px solid white;
+      border-radius: 50%;
     }
 
     .news-container {
@@ -211,6 +227,35 @@
       background: var(--card-bg);
       padding: 8px 0;
       z-index: 1;
+    }
+
+    /* 검색 결과 요약 박스 스타일 */
+    .summary-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      color: var(--text-color);
+      font-size: 13px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .summary-box div {
+      margin-bottom: 8px;
+    }
+
+    .summary-box div:last-child {
+      margin-bottom: 0;
+    }
+
+    .summary-box strong {
+      color: var(--text-color);
+      margin-right: 8px;
+    }
+
+    .summary-box span {
+      color: var(--text-secondary);
     }
 
     /* 뉴스 카드 스타일 */
@@ -350,13 +395,17 @@
       }
 
       .filter-buttons {
-        padding: 12px;
-        margin-bottom: 12px;
+        padding: 4px;
       }
 
-      .filter-buttons button {
-        padding: 10px;
-        font-size: 1em;
+      .filter-button {
+        height: 20px;
+        min-width: 20px;
+      }
+
+      .filter-button span {
+        bottom: -16px;
+        font-size: 9px;
       }
 
       .news-container {
@@ -413,8 +462,7 @@
         font-size: 12px;
       }
 
-      .filter-buttons button,
-      .search-form button {
+      .filter-button {
         font-size: 0.9em;
       }
 
@@ -465,23 +513,80 @@
         padding: 6px 12px;
       }
     }
+
+    /* 레이아웃 선택 버튼 */
+    .layout-controls {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: var(--card-bg);
+      padding: 8px;
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+    }
+
+    .layout-controls button {
+      padding: 6px 12px;
+      border: 1px solid var(--border-color);
+      background: var(--card-bg);
+      color: var(--text-color);
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .layout-controls button.active {
+      background: var(--link-color);
+      color: white;
+      border-color: var(--link-color);
+    }
+
+    /* 레이아웃 설정 */
+    [data-layout="hot"] .right-panel { display: none; }
+    [data-layout="hot"] .left-panel { width: 100%; padding: 0; }
+    
+    [data-layout="db"] .left-panel { display: none; }
+    [data-layout="db"] .right-panel { width: 100%; padding: 0; }
+    
+    [data-layout="split"] .left-panel,
+    [data-layout="split"] .right-panel {
+      width: 50%;
+    }
   </style>
 </head>
 <body>
-  <button class="theme-toggle" onclick="toggleTheme()">
-    <span class="icon">🌓</span>
-    <span class="text">테마 변경</span>
-  </button>
+  <!-- 레이아웃 컨트롤 -->
+  <div class="layout-controls">
+    <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
+    <button onclick="setLayout('db')" data-layout="db">DB 영역</button>
+    <button onclick="setLayout('split')" data-layout="split" class="active">5:5 영역</button>
+    <button onclick="toggleTheme()" class="theme-toggle">
+      <span class="icon">🌓</span>
+    </button>
+  </div>
 
   <div class="container">
-    <!-- 왼쪽: HOT 뉴스 -->
     <div class="left-panel">
       <div class="filter-buttons">
         <h3>📊 필터</h3>
-        <button data-type="all" class="active">전체</button>
-        <button data-type="top">매우 중요</button>
-        <button data-type="mid">중요</button>
-        <button data-type="low">보통</button>
+        <button class="filter-button all active" data-type="all">
+          <span>전체</span>
+        </button>
+        <button class="filter-button top" data-type="top">
+          <span>매우중요</span>
+        </button>
+        <button class="filter-button mid" data-type="mid">
+          <span>중요</span>
+        </button>
+        <button class="filter-button low" data-type="low">
+          <span>보통</span>
+        </button>
       </div>
 
       <div class="news-container">
@@ -504,6 +609,14 @@
 
       <div id="searching-text" class="spinner-blink" style="display:none;">
         🔍 검색 중이에요!
+      </div>
+
+      <!-- 검색 결과 요약 박스 추가 -->
+      <div id="summary" class="summary-box" style="display: none;">
+        <div><strong>최신 뉴스 시간:</strong><span id="latest-time">-</span></div>
+        <div><strong>최초 뉴스 시간:</strong><span id="earliest-time">-</span></div>
+        <div><strong>채널 수:</strong><span id="channel-count">-</span></div>
+        <div><strong>뉴스 수:</strong><span id="news-count">-</span></div>
       </div>
 
       <div class="search-results">
@@ -686,6 +799,68 @@
       renderNewsCards(filtered, "hot-news-list");
     }
 
+    // 시간 파싱 함수 추가
+    function parseTime(t) {
+      if (!t) return "시간 없음";
+      try {
+        const d = new Date(t);
+        if (isNaN(d.getTime())) return "시간 오류";
+
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const s = String(d.getSeconds()).padStart(2, '0');
+
+        const now = new Date();
+        const diffMin = Math.floor((now - d) / 60000);
+        const diffHr = Math.floor(diffMin / 60);
+
+        const ago = diffMin < 60 ? `${diffMin}분전` : `${diffHr}시간전`;
+        return `${h}:${m}:${s} / ${ago}`;
+      } catch {
+        return "시간 오류";
+      }
+    }
+
+    // 검색 결과 요약 업데이트 함수
+    function updateSummary(matches) {
+      const times = [];
+      const channels = new Set();
+
+      // 뉴스에서 시간 및 채널 수를 수집
+      matches.forEach(m => {
+        try {
+          const time = m.row["시간"] || m.row["최신 뉴스 시간"];
+          if (time) {
+            times.push(time);
+          }
+          const channel = m.row["채널"] || m.row["언급 채널"];
+          if (channel) {
+            channels.add(channel);
+          }
+        } catch (e) {
+          console.log("요약 계산 중 오류 발생", e);
+        }
+      });
+
+      // 요약 박스 표시
+      const summaryBox = document.getElementById("summary");
+      summaryBox.style.display = matches.length > 0 ? "block" : "none";
+
+      // 시간 정보 업데이트
+      if (times.length) {
+        times.sort();
+        document.getElementById("latest-time").textContent = parseTime(times[times.length - 1]);
+        document.getElementById("earliest-time").textContent = parseTime(times[0]);
+      } else {
+        document.getElementById("latest-time").textContent = "-";
+        document.getElementById("earliest-time").textContent = "-";
+      }
+
+      // 채널 수와 뉴스 수 업데이트
+      document.getElementById("channel-count").textContent = `${channels.size}건`;
+      document.getElementById("news-count").textContent = `${matches.length}건`;
+    }
+
     // 검색 처리
     async function handleSearch() {
       const input = document.getElementById("search-input").value.trim();
@@ -716,9 +891,8 @@
           })
           .map(row => ({ row }));
 
-        // 검색 결과가 없으면 강제로 새로 로드 후 재검색
         if (results.length === 0) {
-          const freshData = await loadDBData(true); // 강제 새로고침
+          const freshData = await loadDBData(true);
           const freshResults = freshData
             .filter(row => {
               const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
@@ -729,8 +903,10 @@
             .map(row => ({ row }));
           
           renderNewsCards(freshResults, "search-results-list", replaced);
+          updateSummary(freshResults); // 검색 결과 요약 업데이트
         } else {
           renderNewsCards(results, "search-results-list", replaced);
+          updateSummary(results); // 검색 결과 요약 업데이트
         }
       } catch (error) {
         console.error("검색 중 오류:", error);
@@ -740,6 +916,8 @@
             ${error.message}
           </div>
         `;
+        // 에러 시 요약 박스 숨기기
+        document.getElementById("summary").style.display = "none";
       } finally {
         searchButton.disabled = false;
         searchButton.textContent = "검색";
@@ -790,6 +968,22 @@
       const currentTheme = document.documentElement.getAttribute('data-theme');
       const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
       setTheme(newTheme);
+    }
+
+    // 레이아웃 설정 함수
+    function setLayout(layout) {
+      document.documentElement.setAttribute('data-layout', layout);
+      
+      // 버튼 활성화 상태 업데이트
+      document.querySelectorAll('.layout-controls button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.layout === layout) {
+          btn.classList.add('active');
+        }
+      });
+
+      // 레이아웃 저장
+      localStorage.setItem('layout', layout);
     }
 
     // 초기화
@@ -874,6 +1068,10 @@
             }
           });
         }
+
+        // 초기화 시 저장된 레이아웃 적용
+        const savedLayout = localStorage.getItem('layout') || 'split';
+        setLayout(savedLayout);
 
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
