@@ -1,56 +1,106 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <title>디마니코 심플 뉴스</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root[data-theme="light"] {
+      --bg-color: #f5f5f5;
+      --card-bg: #ffffff;
+      --text-color: #333333;
+      --text-secondary: #666666;
+      --border-color: #dddddd;
+      --highlight-bg: #fff8b3;
+      --highlight-text: #333333;
+      --link-color: #007bff;
+      --divider-color: #ff0000;
+      --card-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      --top-card-bg: #ffe5e5;
+      --mid-card-bg: #fff3e0;
+      --low-card-bg: #fffde7;
+    }
+
+    :root[data-theme="dark"] {
+      --bg-color: #1e1e1e;
+      --card-bg: #2d2d2d;
+      --text-color: #ffffff;
+      --text-secondary: #999999;
+      --border-color: #3d3d3d;
+      --highlight-bg: #4d4d00;
+      --highlight-text: #ffffff;
+      --link-color: #66b3ff;
+      --divider-color: #ff0000;
+      --card-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      --top-card-bg: #331111;
+      --mid-card-bg: #332211;
+      --low-card-bg: #333311;
+    }
 
     body {
       font-family: sans-serif;
-      padding: 16px;
-      background: #f5f5f5;
+      padding: 12px;
+      background: var(--bg-color);
       font-size: 13px;
+      min-width: 320px;
+      color: var(--text-color);
     }
 
     .container {
       display: flex;
-      gap: 24px;
+      gap: 16px;
+      width: 100%;
       max-width: 1400px;
       margin: 0 auto;
+      position: relative;
     }
 
-    /* 왼쪽 패널 */
+    .container::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--divider-color);
+      transform: translateX(-50%);
+    }
+
+    /* 왼쪽 패널 - HOT */
     .left-panel {
-      width: 250px;
-      flex-shrink: 0;
+      width: 50%;
+      padding-right: 16px;
     }
 
     .filter-buttons {
-      background: white;
+      background: var(--card-bg);
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: var(--card-shadow);
       margin-bottom: 16px;
+      border: 1px solid var(--border-color);
     }
 
     .filter-buttons h3 {
       margin-bottom: 12px;
-      color: #333;
+      color: var(--text-color);
       font-size: 14px;
     }
 
     .filter-buttons button {
       width: 100%;
-      padding: 8px 16px;
+      padding: 8px 12px;
       margin-bottom: 8px;
       border-radius: 20px;
-      border: 1px solid #ddd;
-      background: white;
+      border: 1px solid var(--border-color);
+      background: var(--card-bg);
+      color: var(--text-color);
       cursor: pointer;
       font-size: 0.9em;
       transition: all 0.2s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .filter-buttons button:last-child {
@@ -60,39 +110,49 @@
     .filter-buttons button.active {
       background: #007bff;
       color: white;
-      border-color: #007bff;
+      border-color: #0056b3;
     }
 
     .news-container {
-      background: white;
+      background: var(--card-bg);
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: var(--card-shadow);
+      height: calc(100vh - 140px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--border-color);
     }
 
     .news-container h3 {
       margin-bottom: 12px;
-      color: #333;
+      color: var(--text-color);
       font-size: 14px;
+      position: sticky;
+      top: 0;
+      background: var(--card-bg);
+      padding: 8px 0;
+      z-index: 1;
     }
 
-    /* 오른쪽 패널 */
+    /* 오른쪽 패널 - DB */
     .right-panel {
-      flex: 1;
-      min-width: 0;
+      width: 50%;
+      padding-left: 16px;
     }
 
     .search-area {
-      background: white;
+      background: var(--card-bg);
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: var(--card-shadow);
       margin-bottom: 16px;
+      border: 1px solid var(--border-color);
     }
 
     .search-area h3 {
       margin-bottom: 12px;
-      color: #333;
+      color: var(--text-color);
       font-size: 14px;
     }
 
@@ -103,10 +163,17 @@
 
     .search-form input {
       flex: 1;
+      min-width: 0;
       padding: 8px 12px;
       border-radius: 4px;
-      border: 1px solid #ddd;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-color);
       font-size: 13px;
+    }
+
+    .search-form input::placeholder {
+      color: var(--text-secondary);
     }
 
     .search-form button {
@@ -116,25 +183,34 @@
       color: white;
       border-radius: 4px;
       cursor: pointer;
-      min-width: 80px;
+      white-space: nowrap;
     }
 
     .search-form button:disabled {
-      background: #999;
+      background: #666;
       cursor: not-allowed;
     }
 
     .search-results {
-      background: white;
+      background: var(--card-bg);
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: var(--card-shadow);
+      height: calc(100vh - 200px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--border-color);
     }
 
     .search-results h3 {
       margin-bottom: 12px;
-      color: #333;
+      color: var(--text-color);
       font-size: 14px;
+      position: sticky;
+      top: 0;
+      background: var(--card-bg);
+      padding: 8px 0;
+      z-index: 1;
     }
 
     /* 뉴스 카드 스타일 */
@@ -145,37 +221,40 @@
     }
 
     .news-card {
-      background: white;
+      background: var(--bg-color);
       padding: 16px;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      box-shadow: var(--card-shadow);
       transition: all 0.2s;
+      word-break: break-word;
+      border: 1px solid var(--border-color);
     }
 
     .news-card.top { 
-      background: #ffe5e5; 
-      border-left: 4px solid #cc0000; 
+      background: var(--top-card-bg); 
+      border-left: 4px solid var(--divider-color); 
     }
 
     .news-card.mid { 
-      background: #fff3e0; 
-      border-left: 4px solid #ff9800; 
+      background: var(--mid-card-bg); 
+      border-left: 4px solid var(--divider-color); 
     }
 
     .news-card.low { 
-      background: #fffde7; 
-      border-left: 4px solid #fbc02d; 
+      background: var(--low-card-bg); 
+      border-left: 4px solid var(--divider-color); 
     }
 
     .news-title {
       font-weight: bold;
       font-size: 1.1em;
       margin-bottom: 8px;
-      color: #222;
+      color: var(--text-color);
+      word-break: break-word;
     }
 
     .news-info {
-      color: #666;
+      color: var(--text-secondary);
       font-size: 0.9em;
       margin-bottom: 4px;
     }
@@ -185,14 +264,19 @@
     }
 
     .news-link a {
-      color: #007bff;
+      color: var(--link-color);
       text-decoration: none;
+      word-break: break-all;
+    }
+
+    .news-link a:hover {
+      text-decoration: underline;
     }
 
     .spinner-blink {
       text-align: center;
       padding: 20px;
-      color: #666;
+      color: #999;
       animation: blink 1s infinite;
     }
 
@@ -201,30 +285,196 @@
     }
 
     .highlight {
-      background: #fff8b3;
+      background: var(--highlight-bg);
+      color: var(--highlight-text);
+      padding: 0 2px;
+      border-radius: 2px;
     }
 
     .refresh-notification {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.9);
       color: white;
       padding: 12px 20px;
       border-radius: 8px;
       animation: slideIn 0.3s ease-out;
       z-index: 1000;
+      border: 1px solid var(--border-color);
     }
 
     @keyframes slideIn {
       from { transform: translateX(100%); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
     }
+
+    /* 스크롤바 스타일 */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg-color);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4d4d4d;
+    }
+
+    /* 모바일 최적화 */
+    @media (max-width: 768px) {
+      body {
+        padding: 8px;
+      }
+
+      .container {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .container::after {
+        display: none;
+      }
+
+      .left-panel,
+      .right-panel {
+        width: 100%;
+        padding: 0;
+      }
+
+      .filter-buttons {
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .filter-buttons button {
+        padding: 10px;
+        font-size: 1em;
+      }
+
+      .news-container {
+        height: auto;
+        max-height: 50vh;
+      }
+
+      .search-area {
+        padding: 12px;
+      }
+
+      .search-form {
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .search-form input {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+      }
+
+      .search-form button {
+        width: 100%;
+        padding: 10px;
+        font-size: 1em;
+      }
+
+      .search-results {
+        height: auto;
+        max-height: 60vh;
+        padding: 12px;
+      }
+
+      .news-card {
+        padding: 12px;
+      }
+
+      .news-title {
+        font-size: 1em;
+      }
+
+      .refresh-notification {
+        left: 20px;
+        right: 20px;
+        text-align: center;
+      }
+    }
+
+    /* 작은 모바일 화면 최적화 */
+    @media (max-width: 360px) {
+      body {
+        padding: 4px;
+        font-size: 12px;
+      }
+
+      .filter-buttons button,
+      .search-form button {
+        font-size: 0.9em;
+      }
+
+      .news-title {
+        font-size: 0.95em;
+      }
+
+      .news-info {
+        font-size: 0.85em;
+      }
+    }
+
+    /* 테마 토글 버튼 스타일 */
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 8px 16px;
+      color: var(--text-color);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+      box-shadow: var(--card-shadow);
+    }
+
+    .theme-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .theme-toggle .icon {
+      font-size: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .theme-toggle {
+        top: auto;
+        bottom: 20px;
+        right: 20px;
+        font-size: 12px;
+        padding: 6px 12px;
+      }
+    }
   </style>
 </head>
 <body>
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span class="icon">🌓</span>
+    <span class="text">테마 변경</span>
+  </button>
+
   <div class="container">
-    <!-- 왼쪽: 필터 + HOT 뉴스 -->
+    <!-- 왼쪽: HOT 뉴스 -->
     <div class="left-panel">
       <div class="filter-buttons">
         <h3>📊 필터</h3>
@@ -242,10 +492,10 @@
       </div>
     </div>
 
-    <!-- 오른쪽: 검색 + 검색결과 -->
+    <!-- 오른쪽: DB 검색 -->
     <div class="right-panel">
       <div class="search-area">
-        <h3>🔍 검색</h3>
+        <h3>🔍 DB 검색</h3>
         <div class="search-form">
           <input type="text" placeholder="검색어를 입력하세요" id="search-input">
           <button id="search-button">검색</button>
@@ -269,6 +519,9 @@
     let currentFilter = 'all';
     let currentData = [];
     let stockMap = {};
+    let dbCache = null;
+    let lastDBUpdate = null;
+    const DB_UPDATE_INTERVAL = 60000; // 1분
 
     // 점수 계산
     function calculateScore(row) {
@@ -310,7 +563,32 @@
       return `${month}.${date}(${dayStr}) DB`;
     }
 
-    // 검색 결과 하이라이트
+    // DB 데이터 로드
+    async function loadDBData(force = false) {
+      // 강제 로드가 아니고, 캐시가 있고, 마지막 업데이트가 1분 이내라면 캐시 사용
+      if (!force && dbCache && lastDBUpdate && (Date.now() - lastDBUpdate < DB_UPDATE_INTERVAL)) {
+        return dbCache;
+      }
+
+      try {
+        const sheetName = getTodayDbSheetName();
+        const response = await fetch(`/sheet/${sheetName}`);
+        if (!response.ok) {
+          throw new Error(`API 오류: ${response.status}`);
+        }
+        
+        dbCache = await response.json();
+        lastDBUpdate = Date.now();
+        
+        console.log('DB 데이터 로드 완료:', dbCache?.length || 0, '건');
+        return dbCache;
+      } catch (error) {
+        console.error('DB 데이터 로드 실패:', error);
+        throw error;
+      }
+    }
+
+    // 검색어 하이라이트
     function highlight(text, keywords) {
       return keywords.reduce((acc, word) => {
         return acc.replace(
@@ -401,21 +679,38 @@
       searchingText.style.display = "block";
 
       try {
-        const sheetName = getTodayDbSheetName();
-        const response = await fetch(`/sheet/${sheetName}`);
-        const data = await response.json();
-        
+        // DB 데이터 로드 (또는 캐시 사용)
+        const data = await loadDBData();
+        if (!data || !data.length) {
+          throw new Error('검색할 데이터가 없습니다.');
+        }
+
         const replaced = keywords.map(k => stockMap[k] || k);
         const results = data
           .filter(row => {
-            const title = row["뉴스 제목"] || "";
+            const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
             return replaced.every(k => 
               title.toLowerCase().includes(k.toLowerCase())
             );
           })
           .map(row => ({ row }));
 
-        renderNewsCards(results, "search-results-list", replaced);
+        // 검색 결과가 없으면 강제로 새로 로드 후 재검색
+        if (results.length === 0) {
+          const freshData = await loadDBData(true); // 강제 새로고침
+          const freshResults = freshData
+            .filter(row => {
+              const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
+              return replaced.every(k => 
+                title.toLowerCase().includes(k.toLowerCase())
+              );
+            })
+            .map(row => ({ row }));
+          
+          renderNewsCards(freshResults, "search-results-list", replaced);
+        } else {
+          renderNewsCards(results, "search-results-list", replaced);
+        }
       } catch (error) {
         console.error("검색 중 오류:", error);
         document.getElementById("search-results-list").innerHTML = `
@@ -429,6 +724,51 @@
         searchButton.textContent = "검색";
         searchingText.style.display = "none";
       }
+    }
+
+    // 주기적 데이터 업데이트
+    function startPeriodicUpdate() {
+      setInterval(async () => {
+        try {
+          await loadDBData(true);
+        } catch (error) {
+          console.error('주기적 업데이트 실패:', error);
+        }
+      }, DB_UPDATE_INTERVAL);
+    }
+
+    // 테마 관련 함수
+    function getPreferredTheme() {
+      // 저장된 테마가 있으면 사용
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme) {
+        return savedTheme;
+      }
+      
+      // 시스템 테마 확인
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+      
+      return 'light';
+    }
+
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      
+      // 버튼 텍스트 업데이트
+      const themeToggle = document.querySelector('.theme-toggle');
+      if (themeToggle) {
+        const icon = themeToggle.querySelector('.icon');
+        icon.textContent = theme === 'dark' ? '🌞' : '🌒';
+      }
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setTheme(newTheme);
     }
 
     // 초기화
@@ -476,6 +816,9 @@
           });
         }
 
+        // DB 데이터 미리 로드
+        await loadDBData();
+
         // HOT 시트 데이터 로드
         const hotSheet = sheets.find(s => s.name.includes("HOT"));
         if (hotSheet) {
@@ -495,6 +838,22 @@
           // 초기 렌더링 (전체 - 원본 순서)
           renderFilteredData(currentData);
         }
+
+        // 주기적 업데이트 시작
+        startPeriodicUpdate();
+
+        // 초기 테마 설정
+        setTheme(getPreferredTheme());
+        
+        // 시스템 테마 변경 감지
+        if (window.matchMedia) {
+          window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (!localStorage.getItem('theme')) {
+              setTheme(e.matches ? 'dark' : 'light');
+            }
+          });
+        }
+
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
       }
