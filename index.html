@@ -2,9 +2,8 @@
 <html lang="ko" data-theme="light" data-layout="hot">
 <head>
   <meta charset="UTF-8">
-  <title>김성훈 주식 뉴스</title>
+  <title>디마니코 심플 뉴스</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>D</text></svg>">
   <style>
     :root[data-theme="light"] {
       --bg-color: #f5f5f5;
@@ -183,7 +182,6 @@
     .search-form {
       display: flex;
       gap: 8px;
-      align-items: center;
     }
 
     .search-form input {
@@ -797,12 +795,11 @@
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
     <div class="layout-buttons">
-      <button onclick="setLayout('hot')" data-layout="hot">뉴스보기</button>
-      <button onclick="setLayout('db')" data-layout="db">검색하기</button>
-      <button onclick="setLayout('split')" data-layout="split" class="active">뉴스+검색</button>
+      <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
+      <button onclick="setLayout('db')" data-layout="db">DB 영역</button>
+      <button onclick="setLayout('split')" data-layout="split" class="active">5:5 영역</button>
       <button onclick="toggleTheme()" class="theme-toggle">
         <span class="icon">🌓</span>
-        <span id="theme-text">밝은 모드</span>
       </button>
     </div>
 
@@ -869,7 +866,6 @@
         <h3>🔍 DB 검색</h3>
         <div class="search-form">
           <input type="text" placeholder="검색어를 입력하세요" id="search-input">
-          <button id="clear-search" style="padding: 4px 8px; border: none; background: #4d4d4d; color: white; border-radius: 4px; cursor: pointer;">X</button>
           <button id="search-button">검색</button>
         </div>
       </div>
@@ -905,8 +901,6 @@
     let lastDataTimestamp = null;
     const UPDATE_CHECK_INTERVAL = 15000; // 15초마다 업데이트 체크
     let stockCache = null;
-    let searchInput; // 전역 변수로 선언
-    let isLoading = false;
 
     // 점수 계산
     function calculateScore(row) {
@@ -1007,8 +1001,9 @@
     // 뉴스 카드 렌더링
     function renderNewsCards(data, targetElement, keywords = []) {
       const list = document.getElementById(targetElement);
-
+      
       if (targetElement === 'search-results-list') {
+        // DB 검색 결과 렌더링
         list.innerHTML = "";
 
         if (!data.length) {
@@ -1023,15 +1018,16 @@
         data.forEach(item => {
           const card = document.createElement("div");
           card.className = "news-card";
-
+          
           const title = item.row["뉴스 제목"] || "";
           const time = item.row["시간"] || "";
           const channelName = item.row["채널명"] || "";
           const stockName = item.row["종목명"] || "";
           const link = item.row["링크"] || "";
-
+          
+          // 시간 포맷팅
           const timeDisplay = parseTime(time);
-
+          
           const safeLink = !link || link.includes("stockinfo7.com")
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
             : link;
@@ -1054,16 +1050,72 @@
 
           list.appendChild(card);
         });
+      } else {
+        // HOT 뉴스 렌더링 (기존 코드 유지)
+        const loadingElement = document.getElementById('hot-news-loading');
+        const skeletonElement = document.getElementById('hot-news-skeleton');
+        
+        if (loadingElement) loadingElement.style.display = 'none';
+        if (skeletonElement) skeletonElement.style.display = 'none';
+        
+        list.innerHTML = "";
+
+        if (!data.length) {
+          list.innerHTML = `
+            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+              😢 표시할 뉴스가 없습니다
+            </div>
+          `;
+          return;
+        }
+
+        data.forEach(item => {
+          const card = document.createElement("div");
+          card.className = `news-card ${item.grade || ""}`;
+          
+          const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
+          const latestTime = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
+          const firstTime = item.row["최초 뉴스 시간"] || "";
+          const newsCount = item.row["관련뉴스 수"] || "0";
+          const channelCount = item.row["언급 채널 수"] || "0";
+          const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
+          
+          const safeLink = !link || link.includes("stockinfo7.com")
+            ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
+            : link;
+
+          const highlightedTitle = keywords.length 
+            ? highlight(title, keywords)
+            : title;
+
+          card.innerHTML = `
+            <div class="news-title">${highlightedTitle}</div>
+            <div class="news-info">🕒 최신 ${latestTime}${firstTime ? ` • 최초 ${firstTime}` : ''}</div>
+            <div class="news-info">
+              📡 관련뉴스 ${newsCount}건 / 언급채널 ${channelCount}개
+              ${item.score ? `<span style="font-size:11px; color:#888;">(${item.score}점)</span>` : ''}
+            </div>
+            <div class="news-link" style="display:flex; gap:8px; align-items:center;">
+              <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
+              ${(!link || link.includes("stockinfo7.com")) ? 
+                `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
+            </div>
+          `;
+
+          list.appendChild(card);
+        });
       }
     }
 
     // 필터 설정 함수 수정
     function setFilter(filter) {
         currentFilter = filter;
+        
         // URL 쿼리 파라미터 업데이트
         const url = new URL(window.location);
         url.searchParams.set('filter', filter);
         window.history.pushState({}, '', url);
+        
         // 버튼 활성화 상태 업데이트
         document.querySelectorAll('.filter-button').forEach(btn => {
             btn.classList.remove('active');
@@ -1071,11 +1123,16 @@
                 btn.classList.add('active');
             }
         });
-        // 항상 최상단으로 스크롤
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
+        
+        // 필터 버튼이 고정된 상태라면 최상단으로 스크롤
+        const filterButtons = document.querySelector('.filter-buttons');
+        if (filterButtons.classList.contains('fixed')) {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
         // 필터링된 데이터 렌더링
         renderFilteredData(currentData);
     }
@@ -1103,7 +1160,7 @@
             .filter(item => item.grade === currentFilter)
             .sort((a, b) => b.score - a.score);
         
-        renderNewsCards(filtered, "hot-news-list", [], false);
+        renderNewsCards(filtered, "hot-news-list");
     }
 
     // 시간 파싱 함수 추가
@@ -1145,7 +1202,7 @@
             channels.add(channel);
           }
         } catch (e) {
-          console.log('요약 계산 중 오류 발생', e);
+          console.log("요약 계산 중 오류 발생", e);
         }
       });
 
@@ -1340,9 +1397,6 @@
         const currentIds = new Set(currentData.map(item => item.row.id));
         const newItems = newData.filter(item => !currentIds.has(item.id));
         
-        const now = new Date();
-        const timeString = `${now.getHours()}:${now.getMinutes()}`;
-
         if (newItems.length > 0) {
           const newItemsWithScore = newItems.map(row => ({
             row,
@@ -1353,11 +1407,9 @@
           currentData = assignGrade([...currentData, ...newItemsWithScore]);
           renderFilteredData(currentData);
           
-          console.log(`${timeString} - ${newItems.length}개의 새로운 뉴스가 추가되었습니다`);
           showToastNotification(`${newItems.length}개의 새로운 뉴스가 추가되었습니다`);
           return true;
         }
-        console.log(`${timeString} - 새로운 데이터가 없습니다`);
         return false;
       } catch (error) {
         console.error('데이터 확인 중 오류:', error);
@@ -1368,12 +1420,8 @@
     // 주기적 업데이트 시작 함수 수정
     function startPeriodicUpdate() {
       setInterval(async () => {
-        try {
-          await checkForNewData();
-        } catch (error) {
-          console.error('데이터 확인 중 오류:', error);
-        }
-      }, 60000); // 호출 간격을 1분으로 조정
+        await checkForNewData();
+      }, UPDATE_CHECK_INTERVAL);
     }
 
     // 테마 관련 함수
@@ -1383,12 +1431,12 @@
 
     function setTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
+      
+      // 버튼 텍스트 업데이트
       const themeToggle = document.querySelector('.theme-toggle');
       if (themeToggle) {
         const icon = themeToggle.querySelector('.icon');
-        const themeText = themeToggle.querySelector('#theme-text');
         icon.textContent = theme === 'dark' ? '🌞' : '🌒';
-        themeText.textContent = theme === 'dark' ? '다크 모드' : '밝은 모드';
       }
     }
 
@@ -1503,146 +1551,132 @@
       }
     }
 
-    // 종목 코드 변환 함수
-    async function convertStockCode(input) {
-        try {
-            const stockData = await loadStockData();
-            const code = input.trim();
-            // 6자리 숫자인 경우에만 변환 시도
-            if (/^\d{6}$/.test(code) && stockData[code]) {
-                searchInput.value = stockData[code];
-                console.log('종목 코드 변환:', code, '->', stockData[code]);
-            }
-        } catch (error) {
-            console.error('종목 코드 변환 실패:', error);
-        }
-    }
+    // 초기화
+    document.addEventListener("DOMContentLoaded", async () => {
+      const searchInput = document.getElementById("search-input");
+      const searchButton = document.getElementById("search-button");
 
-    // 디바운스된 변환 함수
-    const debouncedConvert = debounce(async (value) => {
+      // 디바운스 함수
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+      
+      // 종목 코드 변환 함수
+      async function convertStockCode(input) {
+        try {
+          const stockData = await loadStockData();
+          const code = input.trim();
+          
+          // 6자리 숫자인 경우에만 변환 시도
+          if (/^\d{6}$/.test(code) && stockData[code]) {
+            searchInput.value = stockData[code];
+            console.log('종목 코드 변환:', code, '->', stockData[code]);
+          }
+        } catch (error) {
+          console.error('종목 코드 변환 실패:', error);
+        }
+      }
+      
+      // 입력 이벤트에 디바운스 적용
+      const debouncedConvert = debounce(async (value) => {
         await convertStockCode(value);
         if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
-            handleSearch();
+          handleSearch();
         }
-    }, 300);
+      }, 300);
+      
+      // 검색창 입력 이벤트 처리
+      searchInput.addEventListener("input", (e) => {
+        debouncedConvert(e.target.value);
+      });
 
-    // 초기화
-    function initializePage() {
-        // 초기 레이아웃을 '뉴스보기'로 설정
+      // 검색 이벤트
+      searchButton.addEventListener("click", () => handleSearch());
+
+      searchInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleSearch();
+        }
+      });
+
+      // 맨 위로 버튼 이벤트 리스너
+      const scrollButton = document.getElementById('scrollToTop');
+      scrollButton.addEventListener('click', () => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+
+      // 스크롤 이벤트 리스너에 쓰로틀 적용
+      window.addEventListener('scroll', throttle(() => {
+        handleScroll();
+      }, 100));
+
+      // 붙여넣기 이벤트 처리
+      searchInput.addEventListener("paste", async (e) => {
+        const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+        if (/^\d{6}$/.test(pastedText)) { // 6자리 숫자인 경우에만 자동 검색
+          await debouncedConvert(pastedText);
+        }
+      });
+
+      try {
+        // 시트 목록 먼저 로드
+        const sheetsResponse = await fetch("/sheets");
+        const sheets = await sheetsResponse.json();
+
+        // 종목 정보 로드
+        await loadStockData();
+
+        // DB 데이터 미리 로드
+        await loadDBData();
+
+        // HOT 시트 데이터 로드
+        const hotSheet = sheets.find(s => s.name.includes("HOT"));
+        if (hotSheet) {
+          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`);
+          const hotData = await hotResponse.json();
+          
+          currentData = hotData.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          
+          currentData = assignGrade(currentData);
+          
+          // URL에서 초기 상태 확인 후 적용
+          initializeFromURL();
+          
+          // URL에 필터나 검색어가 없는 경우 기본 렌더링
+          if (!new URLSearchParams(window.location.search).has('filter') && 
+              !new URLSearchParams(window.location.search).has('search')) {
+            renderNewsCards(currentData, "hot-news-list");
+          }
+        }
+
+        // 주기적 업데이트 시작
+        startPeriodicUpdate();
+
+        // 초기 테마 설정
+        setTheme('light');
+        
+        // 초기 레이아웃을 HOT으로 설정
         setLayout('hot');
-        // 필터링 기본값을 '매우 중요'로 설정
-        setFilter('top');
-    }
 
-    document.addEventListener("DOMContentLoaded", async () => {
-        searchInput = document.getElementById("search-input");
-        const searchButton = document.getElementById("search-button");
-        const clearSearchButton = document.getElementById("clear-search");
-
-        // 페이지 초기화
-        initializePage();
-
-        // 검색어 지우기 버튼 이벤트 리스너
-        clearSearchButton.addEventListener('click', () => {
-            searchInput.value = '';
-            document.getElementById("search-results-list").innerHTML = '';
-            document.getElementById("summary").style.display = "none";
-        });
-
-        // 검색창 입력 이벤트 처리
-        searchInput.addEventListener("input", (e) => {
-            // 수동 검색 버튼 활성화
-            searchButton.disabled = false;
-        });
-
-        // 엔터키로 검색 실행
-        searchInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                handleSearch();
-            }
-        });
-
-        // 붙여넣기 이벤트 처리
-        searchInput.addEventListener("paste", async (e) => {
-            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-            if (/^\d{6}$/.test(pastedText)) { // 6자리 숫자인 경우에만 자동 검색
-                await debouncedConvert(pastedText);
-            }
-        });
-
-        // 검색 버튼 클릭 이벤트
-        searchButton.addEventListener('click', () => {
-            handleSearch();
-        });
-
-        // 맨 위로 버튼 이벤트 리스너
-        const scrollButton = document.getElementById('scrollToTop');
-        scrollButton.addEventListener('click', () => {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        });
-
-        // 스크롤 이벤트 리스너에 쓰로틀 적용
-        window.addEventListener('scroll', throttle(() => {
-            handleScroll();
-        }, 100));
-
-        try {
-            // 시트 목록 먼저 로드
-            const sheetsResponse = await fetch("/sheets");
-            if (!sheetsResponse.ok) throw new Error('시트 목록을 불러오지 못했습니다.');
-            const sheets = await sheetsResponse.json();
-
-            // 종목 정보 로드
-            await loadStockData();
-
-            // DB 데이터 미리 로드
-            await loadDBData();
-
-            // HOT 시트 데이터 로드
-            const hotSheet = sheets.find(s => s.name.includes("HOT"));
-            if (hotSheet) {
-                const hotResponse = await fetch(`/sheet/${hotSheet.gid}`);
-                if (!hotResponse.ok) throw new Error('HOT 시트를 불러오지 못했습니다.');
-                const hotData = await hotResponse.json();
-
-                currentData = hotData.map((row, index) => ({
-                    row,
-                    score: calculateScore(row),
-                    originalIndex: index
-                }));
-
-                currentData = assignGrade(currentData);
-
-                // URL에서 초기 상태 확인 후 적용
-                initializeFromURL();
-
-                // URL에 필터나 검색어가 없는 경우 기본 렌더링
-                if (!new URLSearchParams(window.location.search).has('filter') &&
-                    !new URLSearchParams(window.location.search).has('search')) {
-                    renderNewsCards(currentData, "hot-news-list");
-                }
-            }
-
-            // 주기적 업데이트 시작
-            startPeriodicUpdate();
-
-            // 초기 테마 설정
-            setTheme('light');
-
-        } catch (error) {
-            console.error("초기 데이터 로드 중 오류:", error);
-            showToastNotification("데이터를 불러오는 중 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.");
-        }
-
-        // 새로고침 시 파라미터 초기화
-        window.addEventListener('beforeunload', () => {
-          const url = new URL(window.location);
-          url.search = ''; // 파라미터 초기화
-          window.history.replaceState({}, '', url);
-        });
+      } catch (error) {
+        console.error("초기 데이터 로드 중 오류:", error);
+      }
     });
   </script>
 </body>
