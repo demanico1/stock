@@ -1056,7 +1056,7 @@
           list.appendChild(card);
         });
       } else {
-        // HOT 뉴스 렌더링 (기존 코드 유지)
+        // HOT 뉴스 렌더링
         const loadingElement = document.getElementById('hot-news-loading');
         const skeletonElement = document.getElementById('hot-news-skeleton');
         
@@ -1066,6 +1066,7 @@
         
         list.innerHTML = "";
 
+        // 데이터 로드 후 로딩 메시지 숨기기
         if (!data.length) {
           list.innerHTML = `
             <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
@@ -1696,6 +1697,13 @@
             console.error("초기 데이터 로드 중 오류:", error);
             showToastNotification("데이터를 불러오는 중 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.");
         }
+
+        // 새로고침 시 파라미터 초기화
+        window.addEventListener('beforeunload', () => {
+          const url = new URL(window.location);
+          url.search = ''; // 파라미터 초기화
+          window.history.replaceState({}, '', url);
+        });
     });
   </script>
 </body>
