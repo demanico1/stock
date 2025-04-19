@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light" data-layout="hot">
 <head>
   <meta charset="UTF-8">
-  <title>디마니코 심플 뉴스</title>
+  <title>김성훈 주식 뉴스</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <style>
     :root[data-theme="light"] {
@@ -795,11 +795,11 @@
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
     <div class="layout-buttons">
-      <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
-      <button onclick="setLayout('db')" data-layout="db">DB 영역</button>
-      <button onclick="setLayout('split')" data-layout="split" class="active">5:5 영역</button>
+      <button onclick="setLayout('hot')" data-layout="hot">뉴스만</button>
+      <button onclick="setLayout('db')" data-layout="db">검색만</button>
+      <button onclick="setLayout('split')" data-layout="split" class="active">뉴스+검색</button>
       <button onclick="toggleTheme()" class="theme-toggle">
-        <span class="icon">🌓</span>
+        <span class="icon">🌓 테마</span>
       </button>
     </div>
 
@@ -866,7 +866,7 @@
         <h3>🔍 DB 검색</h3>
         <div class="search-form">
           <input type="text" placeholder="검색어를 입력하세요" id="search-input">
-          <button id="search-button">검색</button>
+          <button id="clear-search" style="padding: 4px 8px; border: none; background: #4d4d4d; color: white; border-radius: 4px; cursor: pointer;">X</button>
         </div>
       </div>
 
@@ -1628,6 +1628,15 @@
         if (/^\d{6}$/.test(pastedText)) { // 6자리 숫자인 경우에만 자동 검색
           await debouncedConvert(pastedText);
         }
+      });
+
+      // 검색어 지우기 버튼 이벤트 리스너
+      const clearSearchButton = document.getElementById("clear-search");
+
+      clearSearchButton.addEventListener('click', () => {
+          searchInput.value = '';
+          document.getElementById("search-results-list").innerHTML = '';
+          document.getElementById("summary").style.display = "none";
       });
 
       try {
