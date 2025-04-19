@@ -1019,9 +1019,8 @@
       const skeletonElement = document.getElementById('hot-news-skeleton');
 
       if (targetElement === 'hot-news-list' && showLoading) {
-        if (loadingElement) {
+        if (loadingElement && loadingElement.style.display !== 'block') {
           loadingElement.style.display = 'block';
-          console.log('로딩 메시지 표시됨');
         }
         if (skeletonElement) skeletonElement.style.display = 'block';
       }
@@ -1034,14 +1033,11 @@
         const card = document.createElement("div");
         card.className = `news-card ${item.grade || ""}`;
         
-        const title = item.row["뉴스 제목"] || "";
-        const time = item.row["시간"] || "";
-        const channelName = item.row["채널명"] || "";
-        const stockName = item.row["종목명"] || "";
-        const link = item.row["링크"] || "";
-        
-        // 시간 포맷팅
-        const timeDisplay = parseTime(time);
+        const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
+        const latestTime = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
+        const firstTime = item.row["최초 뉴스 시간"] || "";
+        const timeDisplay = parseTime(latestTime);
+        const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
         
         const safeLink = !link || link.includes("stockinfo7.com")
           ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
@@ -1054,8 +1050,6 @@
         card.innerHTML = `
           <div class="news-title">${highlightedTitle}</div>
           <div class="news-info">🕒 ${timeDisplay}</div>
-          <div class="news-info">📡 ${channelName}</div>
-          <div class="news-info">🏢 ${stockName}</div>
           <div class="news-link" style="display:flex; gap:8px; align-items:center;">
             <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
             ${(!link || link.includes("stockinfo7.com")) ? 
