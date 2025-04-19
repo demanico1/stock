@@ -906,6 +906,7 @@
     const UPDATE_CHECK_INTERVAL = 15000; // 15초마다 업데이트 체크
     let stockCache = null;
     let searchInput; // 전역 변수로 선언
+    let isLoading = false;
 
     // 점수 계산
     function calculateScore(row) {
@@ -1005,13 +1006,14 @@
 
     // 뉴스 카드 렌더링
     function renderNewsCards(data, targetElement, keywords = []) {
+      isLoading = true;
       const list = document.getElementById(targetElement);
       
       if (targetElement === 'search-results-list') {
         // DB 검색 결과 렌더링
         list.innerHTML = "";
 
-        if (!data.length) {
+        if (!data.length && !isLoading) {
           console.log('렌더링할 데이터가 없습니다.');
           list.innerHTML = `
             <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
@@ -1070,7 +1072,7 @@
         
         list.innerHTML = "";
 
-        if (!data.length) {
+        if (!data.length && !isLoading) {
           console.log('렌더링할 데이터가 없습니다.');
           list.innerHTML = `
             <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
@@ -1120,6 +1122,7 @@
         if (loadingElement) loadingElement.style.display = 'none';
         if (skeletonElement) skeletonElement.style.display = 'none';
       }
+      isLoading = false;
     }
 
     // 필터 설정 함수 수정
