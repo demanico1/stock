@@ -1580,21 +1580,21 @@
         await convertStockCode(value);
     }, 300);
 
-    // 검색창 입력 이벤트 처리
-    searchInput.addEventListener("input", (e) => {
-        debouncedConvert(e.target.value);
-    });
-    searchInput.addEventListener("paste", async (e) => {
-        await debouncedConvert(e.target.value);
-        if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
-            handleSearch();
-        }
-    });
-
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
       searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
+
+      // 검색창 입력 이벤트 처리
+      searchInput.addEventListener("input", (e) => {
+          debouncedConvert(e.target.value);
+      });
+      searchInput.addEventListener("paste", async (e) => {
+          await debouncedConvert(e.target.value);
+          if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
+              handleSearch();
+          }
+      });
 
       // 맨 위로 버튼 이벤트 리스너
       const scrollButton = document.getElementById('scrollToTop');
