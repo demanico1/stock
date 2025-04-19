@@ -1587,10 +1587,12 @@
         debouncedConvert(e.target.value);
       });
       searchInput.addEventListener("paste", (e) => {
-        setTimeout(() => {
-          debouncedConvert(e.target.value);
-          handleSearch(); // 붙여넣기 후 자동 검색
-        }, 0);
+        setTimeout(async () => {
+            await debouncedConvert(e.target.value);
+            if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
+                handleSearch();
+            }
+        }, 300); // 변환이 완료될 시간을 충분히 줌
       });
 
       // 검색 이벤트
