@@ -830,15 +830,15 @@
     <div class="left-panel">
       <div class="news-container">
         <h3>📰 HOT 뉴스</h3>
-        <div class="loading-spinner" id="hot-news-loading">
-          <span>뉴스를 불러오는 중</span>
-          <div class="dots">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
-          </div>
-        </div>
         <div class="news-list" id="hot-news-list">
+          <div class="loading-spinner" id="hot-news-loading">
+            <span>뉴스를 불러오는 중</span>
+            <div class="dots">
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
+          </div>
           <div id="hot-news-skeleton">
             <div class="skeleton-card">
               <div class="skeleton-title skeleton-loading"></div>
@@ -1012,7 +1012,6 @@
         list.innerHTML = "";
 
         if (!data.length) {
-          console.log('렌더링할 데이터가 없습니다.');
           list.innerHTML = `
             <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
               😢 표시할 뉴스가 없습니다
@@ -1062,16 +1061,13 @@
         const skeletonElement = document.getElementById('hot-news-skeleton');
         
         // 로딩 메시지 표시
-        if (loadingElement) {
-          loadingElement.style.display = 'block';
-          console.log('로딩 메시지 표시됨');
-        }
+        if (loadingElement) loadingElement.style.display = 'block';
         if (skeletonElement) skeletonElement.style.display = 'block';
         
         list.innerHTML = "";
 
+        // 데이터 로드 후 로딩 메시지 숨기기
         if (!data.length) {
-          console.log('렌더링할 데이터가 없습니다.');
           list.innerHTML = `
             <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
               😢 표시할 뉴스가 없습니다
@@ -1168,7 +1164,6 @@
             .filter(item => item.grade === currentFilter)
             .sort((a, b) => b.score - a.score);
         
-        console.log('필터링된 데이터:', filtered);
         renderNewsCards(filtered, "hot-news-list");
     }
 
