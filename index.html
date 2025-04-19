@@ -1061,7 +1061,10 @@
         const skeletonElement = document.getElementById('hot-news-skeleton');
         
         // 로딩 메시지 표시
-        if (loadingElement) loadingElement.style.display = 'block';
+        if (loadingElement) {
+          loadingElement.style.display = 'block';
+          console.log('로딩 메시지 표시됨');
+        }
         if (skeletonElement) skeletonElement.style.display = 'block';
         
         list.innerHTML = "";
