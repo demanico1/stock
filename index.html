@@ -1581,11 +1581,6 @@
         }
     }, 300);
 
-    // 페이지 강제 새로고침 및 캐시 초기화
-    function forceReload() {
-        location.reload(true);
-    }
-
     // 초기화
     function initializePage() {
         // 초기 레이아웃을 '뉴스보기'로 설정
@@ -1598,9 +1593,6 @@
         searchInput = document.getElementById("search-input");
         const searchButton = document.getElementById("search-button");
         const clearSearchButton = document.getElementById("clear-search");
-
-        // 페이지 강제 새로고침 실행
-        forceReload();
 
         // 페이지 초기화
         initializePage();
@@ -1648,6 +1640,7 @@
         try {
             // 시트 목록 먼저 로드
             const sheetsResponse = await fetch("/sheets");
+            if (!sheetsResponse.ok) throw new Error('시트 목록을 불러오지 못했습니다.');
             const sheets = await sheetsResponse.json();
 
             // 종목 정보 로드
@@ -1660,6 +1653,7 @@
             const hotSheet = sheets.find(s => s.name.includes("HOT"));
             if (hotSheet) {
                 const hotResponse = await fetch(`/sheet/${hotSheet.gid}`);
+                if (!hotResponse.ok) throw new Error('HOT 시트를 불러오지 못했습니다.');
                 const hotData = await hotResponse.json();
 
                 currentData = hotData.map((row, index) => ({
@@ -1688,6 +1682,7 @@
 
         } catch (error) {
             console.error("초기 데이터 로드 중 오류:", error);
+            showToastNotification("데이터를 불러오는 중 오류가 발생했습니다. 네트워크 상태를 확인해 주세요.");
         }
     });
   </script>
