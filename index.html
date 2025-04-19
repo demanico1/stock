@@ -1615,6 +1615,13 @@
             searchButton.disabled = false;
         });
 
+        // 엔터키로 검색 실행
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                handleSearch();
+            }
+        });
+
         // 붙여넣기 이벤트 처리
         searchInput.addEventListener("paste", async (e) => {
             const pastedText = (e.clipboardData || window.clipboardData).getData('text');
