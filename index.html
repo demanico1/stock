@@ -1011,17 +1011,11 @@
       
       if (targetElement === 'search-results-list') {
         // DB 검색 결과 렌더링
-        list.innerHTML = "";
-
-        if (!data.length && !isLoading) {
-          console.log('렌더링할 데이터가 없습니다.');
-          list.innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-              😢 표시할 뉴스가 없습니다
-            </div>
-          `;
-          return;
+        if (!data.length) {
+          return; // 아무것도 렌더링하지 말고 기다려 (로딩 메시지 유지됨)
         }
+
+        list.innerHTML = "";
 
         data.forEach(item => {
           const card = document.createElement("div");
@@ -1072,14 +1066,8 @@
         
         list.innerHTML = "";
 
-        if (!data.length && !isLoading) {
-          console.log('렌더링할 데이터가 없습니다.');
-          list.innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-              😢 표시할 뉴스가 없습니다
-            </div>
-          `;
-          return;
+        if (!data.length) {
+          return; // 아무것도 렌더링하지 말고 기다려 (로딩 메시지 유지됨)
         }
 
         data.forEach(item => {
