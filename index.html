@@ -183,6 +183,7 @@
     .search-form {
       display: flex;
       gap: 8px;
+      align-items: center;
     }
 
     .search-form input {
@@ -868,6 +869,7 @@
         <h3>🔍 DB 검색</h3>
         <div class="search-form">
           <input type="text" placeholder="검색어를 입력하세요" id="search-input">
+          <button id="clear-search" style="padding: 8px 16px; border: none; background: #d9534f; color: white; border-radius: 4px; cursor: pointer;">X</button>
           <button id="search-button">검색</button>
         </div>
       </div>
@@ -1393,6 +1395,9 @@
         const currentIds = new Set(currentData.map(item => item.row.id));
         const newItems = newData.filter(item => !currentIds.has(item.id));
         
+        const now = new Date();
+        const timeString = `${now.getHours()}:${now.getMinutes()}`;
+
         if (newItems.length > 0) {
           const newItemsWithScore = newItems.map(row => ({
             row,
@@ -1403,9 +1408,11 @@
           currentData = assignGrade([...currentData, ...newItemsWithScore]);
           renderFilteredData(currentData);
           
+          console.log(`${timeString} - ${newItems.length}개의 새로운 뉴스가 추가되었습니다`);
           showToastNotification(`${newItems.length}개의 새로운 뉴스가 추가되었습니다`);
           return true;
         }
+        console.log(`${timeString} - 새로운 데이터가 없습니다`);
         return false;
       } catch (error) {
         console.error('데이터 확인 중 오류:', error);
@@ -1416,8 +1423,12 @@
     // 주기적 업데이트 시작 함수 수정
     function startPeriodicUpdate() {
       setInterval(async () => {
-        await checkForNewData();
-      }, UPDATE_CHECK_INTERVAL);
+        try {
+          await checkForNewData();
+        } catch (error) {
+          console.error('데이터 확인 중 오류:', error);
+        }
+      }, 60000); // 호출 간격을 1분으로 조정
     }
 
     // 테마 관련 함수
@@ -1574,6 +1585,14 @@
     document.addEventListener("DOMContentLoaded", async () => {
       searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
+      const clearSearchButton = document.getElementById("clear-search");
+
+      // 검색어 지우기 버튼 이벤트 리스너
+      clearSearchButton.addEventListener('click', () => {
+        searchInput.value = '';
+        document.getElementById("search-results-list").innerHTML = '';
+        document.getElementById("summary").style.display = "none";
+      });
 
       // 검색창 입력 이벤트 처리
       searchInput.addEventListener("input", (e) => {
