@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>김성훈 주식 뉴스</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>D</text></svg>">
   <style>
     :root[data-theme="light"] {
       --bg-color: #f5f5f5;
@@ -902,6 +903,7 @@
     let lastDataTimestamp = null;
     const UPDATE_CHECK_INTERVAL = 15000; // 15초마다 업데이트 체크
     let stockCache = null;
+    let searchInput; // 전역 변수로 선언
 
     // 점수 계산
     function calculateScore(row) {
@@ -1591,7 +1593,7 @@
 
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
-      const searchInput = document.getElementById("search-input");
+      searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
 
       // 맨 위로 버튼 이벤트 리스너
