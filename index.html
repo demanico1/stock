@@ -1060,8 +1060,9 @@
         const loadingElement = document.getElementById('hot-news-loading');
         const skeletonElement = document.getElementById('hot-news-skeleton');
         
-        if (loadingElement) loadingElement.style.display = 'none';
-        if (skeletonElement) skeletonElement.style.display = 'none';
+        // 로딩 메시지 표시
+        if (loadingElement) loadingElement.style.display = 'block';
+        if (skeletonElement) skeletonElement.style.display = 'block';
         
         list.innerHTML = "";
 
@@ -1109,6 +1110,10 @@
 
           list.appendChild(card);
         });
+
+        // 로딩 메시지 숨기기
+        if (loadingElement) loadingElement.style.display = 'none';
+        if (skeletonElement) skeletonElement.style.display = 'none';
       }
     }
 
