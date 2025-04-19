@@ -1586,6 +1586,12 @@
       searchInput.addEventListener("input", (e) => {
         debouncedConvert(e.target.value);
       });
+      searchInput.addEventListener("paste", (e) => {
+        setTimeout(() => {
+          debouncedConvert(e.target.value);
+          handleSearch(); // 붙여넣기 후 자동 검색
+        }, 0);
+      });
 
       // 검색 이벤트
       searchButton.addEventListener("click", () => handleSearch());
