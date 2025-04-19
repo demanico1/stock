@@ -1562,22 +1562,12 @@
         }
     }
 
-    // 디바운스 함수
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
     // 디바운스된 변환 함수
     const debouncedConvert = debounce(async (value) => {
         await convertStockCode(value);
+        if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
+            handleSearch();
+        }
     }, 300);
 
     // 초기화
@@ -1591,9 +1581,6 @@
       });
       searchInput.addEventListener("paste", async (e) => {
           await debouncedConvert(e.target.value);
-          if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
-              handleSearch();
-          }
       });
 
       // 맨 위로 버튼 이벤트 리스너
