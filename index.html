@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light" data-layout="hot">
 <head>
   <meta charset="UTF-8">
-  <title>디마니코 심플 뉴스</title>
+  <title>김성훈 주식 뉴스</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <style>
     :root[data-theme="light"] {
@@ -795,11 +795,12 @@
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
     <div class="layout-buttons">
-      <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
-      <button onclick="setLayout('db')" data-layout="db">DB 영역</button>
-      <button onclick="setLayout('split')" data-layout="split" class="active">5:5 영역</button>
+      <button onclick="setLayout('hot')" data-layout="hot">뉴스보기</button>
+      <button onclick="setLayout('db')" data-layout="db">검색하기</button>
+      <button onclick="setLayout('split')" data-layout="split" class="active">뉴스+검색</button>
       <button onclick="toggleTheme()" class="theme-toggle">
         <span class="icon">🌓</span>
+        <span id="theme-text">밝은 모드</span>
       </button>
     </div>
 
@@ -1110,12 +1111,10 @@
     // 필터 설정 함수 수정
     function setFilter(filter) {
         currentFilter = filter;
-        
         // URL 쿼리 파라미터 업데이트
         const url = new URL(window.location);
         url.searchParams.set('filter', filter);
         window.history.pushState({}, '', url);
-        
         // 버튼 활성화 상태 업데이트
         document.querySelectorAll('.filter-button').forEach(btn => {
             btn.classList.remove('active');
@@ -1123,16 +1122,11 @@
                 btn.classList.add('active');
             }
         });
-        
-        // 필터 버튼이 고정된 상태라면 최상단으로 스크롤
-        const filterButtons = document.querySelector('.filter-buttons');
-        if (filterButtons.classList.contains('fixed')) {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
-        
+        // 항상 최상단으로 스크롤
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
         // 필터링된 데이터 렌더링
         renderFilteredData(currentData);
     }
@@ -1431,12 +1425,12 @@
 
     function setTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
-      
-      // 버튼 텍스트 업데이트
       const themeToggle = document.querySelector('.theme-toggle');
       if (themeToggle) {
         const icon = themeToggle.querySelector('.icon');
+        const themeText = themeToggle.querySelector('#theme-text');
         icon.textContent = theme === 'dark' ? '🌞' : '🌒';
+        themeText.textContent = theme === 'dark' ? '다크 모드' : '밝은 모드';
       }
     }
 
