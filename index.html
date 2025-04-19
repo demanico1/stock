@@ -866,7 +866,7 @@
         <h3>🔍 DB 검색</h3>
         <div class="search-form">
           <input type="text" placeholder="검색어를 입력하세요" id="search-input">
-          <button id="clear-search" style="padding: 4px 8px; border: none; background: #4d4d4d; color: white; border-radius: 4px; cursor: pointer;">X</button>
+          <button id="search-button">검색</button>
         </div>
       </div>
 
@@ -1586,12 +1586,7 @@
       }
       
       // 입력 이벤트에 디바운스 적용
-      const debouncedConvert = debounce(async (value) => {
-        await convertStockCode(value);
-        if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
-          handleSearch();
-        }
-      }, 300);
+      const debouncedConvert = debounce(convertStockCode, 300);
       
       // 검색창 입력 이벤트 처리
       searchInput.addEventListener("input", (e) => {
@@ -1621,23 +1616,6 @@
       window.addEventListener('scroll', throttle(() => {
         handleScroll();
       }, 100));
-
-      // 붙여넣기 이벤트 처리
-      searchInput.addEventListener("paste", async (e) => {
-        const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-        if (/^\d{6}$/.test(pastedText)) { // 6자리 숫자인 경우에만 자동 검색
-          await debouncedConvert(pastedText);
-        }
-      });
-
-      // 검색어 지우기 버튼 이벤트 리스너
-      const clearSearchButton = document.getElementById("clear-search");
-
-      clearSearchButton.addEventListener('click', () => {
-          searchInput.value = '';
-          document.getElementById("search-results-list").innerHTML = '';
-          document.getElementById("summary").style.display = "none";
-      });
 
       try {
         // 시트 목록 먼저 로드
@@ -1689,4 +1667,4 @@
     });
   </script>
 </body>
-</html>
+</html> 
