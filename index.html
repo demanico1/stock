@@ -1596,10 +1596,21 @@
 
       // 검색창 입력 이벤트 처리
       searchInput.addEventListener("input", (e) => {
-          debouncedConvert(e.target.value);
+          // 수동 검색 버튼 활성화
+          searchButton.disabled = false;
       });
+
+      // 붙여넣기 이벤트 처리
       searchInput.addEventListener("paste", async (e) => {
-          await debouncedConvert(e.target.value);
+          const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+          if (/^\d{6}$/.test(pastedText)) { // 6자리 숫자인 경우에만 자동 검색
+              await debouncedConvert(pastedText);
+          }
+      });
+
+      // 검색 버튼 클릭 이벤트
+      searchButton.addEventListener('click', () => {
+          handleSearch();
       });
 
       // 맨 위로 버튼 이벤트 리스너
