@@ -1545,65 +1545,54 @@
       }
     }
 
+    // 종목 코드 변환 함수
+    async function convertStockCode(input) {
+        try {
+            const stockData = await loadStockData();
+            const code = input.trim();
+            // 6자리 숫자인 경우에만 변환 시도
+            if (/^\d{6}$/.test(code) && stockData[code]) {
+                searchInput.value = stockData[code];
+                console.log('종목 코드 변환:', code, '->', stockData[code]);
+            }
+        } catch (error) {
+            console.error('종목 코드 변환 실패:', error);
+        }
+    }
+
+    // 디바운스 함수
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // 디바운스된 변환 함수
+    const debouncedConvert = debounce(async (value) => {
+        await convertStockCode(value);
+    }, 300);
+
+    // 검색창 입력 이벤트 처리
+    searchInput.addEventListener("input", (e) => {
+        debouncedConvert(e.target.value);
+    });
+    searchInput.addEventListener("paste", async (e) => {
+        await debouncedConvert(e.target.value);
+        if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
+            handleSearch();
+        }
+    });
+
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
       const searchInput = document.getElementById("search-input");
       const searchButton = document.getElementById("search-button");
-
-      // 디바운스 함수
-      function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-          const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-          };
-          clearTimeout(timeout);
-          timeout = setTimeout(later, wait);
-        };
-      }
-      
-      // 종목 코드 변환 함수
-      async function convertStockCode(input) {
-        try {
-          const stockData = await loadStockData();
-          const code = input.trim();
-          
-          // 6자리 숫자인 경우에만 변환 시도
-          if (/^\d{6}$/.test(code) && stockData[code]) {
-            searchInput.value = stockData[code];
-            console.log('종목 코드 변환:', code, '->', stockData[code]);
-          }
-        } catch (error) {
-          console.error('종목 코드 변환 실패:', error);
-        }
-      }
-      
-      // 입력 이벤트에 디바운스 적용
-      const debouncedConvert = debounce(convertStockCode, 300);
-      
-      // 검색창 입력 이벤트 처리
-      searchInput.addEventListener("input", (e) => {
-        debouncedConvert(e.target.value);
-      });
-      searchInput.addEventListener("paste", (e) => {
-        setTimeout(async () => {
-            await debouncedConvert(e.target.value);
-            if (searchInput.value.trim()) { // 변환이 완료된 후에만 검색
-                handleSearch();
-            }
-        }, 300); // 변환이 완료될 시간을 충분히 줌
-      });
-
-      // 검색 이벤트
-      searchButton.addEventListener("click", () => handleSearch());
-
-      searchInput.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleSearch();
-        }
-      });
 
       // 맨 위로 버튼 이벤트 리스너
       const scrollButton = document.getElementById('scrollToTop');
