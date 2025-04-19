@@ -830,35 +830,42 @@
     <div class="left-panel">
       <div class="news-container">
         <h3>📰 HOT 뉴스</h3>
-        <div class="news-list" id="hot-news-list">
-          <div class="loading-spinner" id="hot-news-loading">
-            <span>뉴스를 불러오는 중</span>
-            <div class="dots">
-              <div class="dot"></div>
-              <div class="dot"></div>
-              <div class="dot"></div>
-            </div>
+
+        <!-- ✅ 로딩 메시지 (기본은 보임) -->
+        <div id="hot-news-loading" class="loading-spinner" style="display: block;">
+          <span>뉴스를 불러오는 중</span>
+          <div class="dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
           </div>
-          <div id="hot-news-skeleton">
-            <div class="skeleton-card">
-              <div class="skeleton-title skeleton-loading"></div>
-              <div class="skeleton-info skeleton-loading"></div>
-              <div class="skeleton-info skeleton-loading"></div>
-              <div class="skeleton-link skeleton-loading"></div>
-            </div>
-            <div class="skeleton-card">
-              <div class="skeleton-title skeleton-loading"></div>
-              <div class="skeleton-info skeleton-loading"></div>
-              <div class="skeleton-info skeleton-loading"></div>
-              <div class="skeleton-link skeleton-loading"></div>
-            </div>
-            <div class="skeleton-card">
-              <div class="skeleton-title skeleton-loading"></div>
-              <div class="skeleton-info skeleton-loading"></div>
-              <div class="skeleton-info skeleton-loading"></div>
-              <div class="skeleton-link skeleton-loading"></div>
-            </div>
+        </div>
+
+        <!-- ✅ 스켈레톤 로딩 (기본은 보임) -->
+        <div id="hot-news-skeleton">
+          <div class="skeleton-card">
+            <div class="skeleton-title skeleton-loading"></div>
+            <div class="skeleton-info skeleton-loading"></div>
+            <div class="skeleton-info skeleton-loading"></div>
+            <div class="skeleton-link skeleton-loading"></div>
           </div>
+          <div class="skeleton-card">
+            <div class="skeleton-title skeleton-loading"></div>
+            <div class="skeleton-info skeleton-loading"></div>
+            <div class="skeleton-info skeleton-loading"></div>
+            <div class="skeleton-link skeleton-loading"></div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-title skeleton-loading"></div>
+            <div class="skeleton-info skeleton-loading"></div>
+            <div class="skeleton-info skeleton-loading"></div>
+            <div class="skeleton-link skeleton-loading"></div>
+          </div>
+        </div>
+
+        <!-- ✅ 리스트만 JS에서 비움 -->
+        <div id="hot-news-list" class="news-list">
+          <!-- 뉴스 카드가 여기에 들어옴 -->
         </div>
       </div>
     </div>
@@ -906,6 +913,7 @@
     const UPDATE_CHECK_INTERVAL = 15000; // 15초마다 업데이트 체크
     let stockCache = null;
     let searchInput; // 전역 변수로 선언
+    let isLoading = false;
 
     // 점수 계산
     function calculateScore(row) {
@@ -986,6 +994,7 @@
         lastDBUpdate = Date.now();
         
         console.log('DB 데이터 로드 완료:', dbCache?.length || 0, '건');
+        console.log('로딩 메시지 표시됨');
         return dbCache;
       } catch (error) {
         console.error('DB 데이터 로드 실패:', error);
@@ -1004,115 +1013,60 @@
     }
 
     // 뉴스 카드 렌더링
-    function renderNewsCards(data, targetElement, keywords = []) {
+    function renderNewsCards(data, targetElement, keywords = [], showLoading = true) {
       const list = document.getElementById(targetElement);
-      
-      if (targetElement === 'search-results-list') {
-        // DB 검색 결과 렌더링
-        list.innerHTML = "";
+      const loadingElement = document.getElementById('hot-news-loading');
+      const skeletonElement = document.getElementById('hot-news-skeleton');
 
-        if (!data.length) {
-          list.innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-              😢 표시할 뉴스가 없습니다
-            </div>
-          `;
-          return;
+      if (targetElement === 'hot-news-list' && showLoading) {
+        if (loadingElement) {
+          loadingElement.style.display = 'block';
+          console.log('로딩 메시지 표시됨');
         }
-
-        data.forEach(item => {
-          const card = document.createElement("div");
-          card.className = "news-card";
-          
-          const title = item.row["뉴스 제목"] || "";
-          const time = item.row["시간"] || "";
-          const channelName = item.row["채널명"] || "";
-          const stockName = item.row["종목명"] || "";
-          const link = item.row["링크"] || "";
-          
-          // 시간 포맷팅
-          const timeDisplay = parseTime(time);
-          
-          const safeLink = !link || link.includes("stockinfo7.com")
-            ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
-            : link;
-
-          const highlightedTitle = keywords.length 
-            ? highlight(title, keywords)
-            : title;
-
-          card.innerHTML = `
-            <div class="news-title">${highlightedTitle}</div>
-            <div class="news-info">🕒 ${timeDisplay}</div>
-            <div class="news-info">📡 ${channelName}</div>
-            <div class="news-info">🏢 ${stockName}</div>
-            <div class="news-link" style="display:flex; gap:8px; align-items:center;">
-              <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
-              ${(!link || link.includes("stockinfo7.com")) ? 
-                `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
-            </div>
-          `;
-
-          list.appendChild(card);
-        });
-      } else {
-        // HOT 뉴스 렌더링
-        const loadingElement = document.getElementById('hot-news-loading');
-        const skeletonElement = document.getElementById('hot-news-skeleton');
-        
-        // 로딩 메시지 표시
-        if (loadingElement) loadingElement.style.display = 'block';
         if (skeletonElement) skeletonElement.style.display = 'block';
+      }
+
+      list.innerHTML = "";
+
+      if (!data.length) return;
+
+      data.forEach(item => {
+        const card = document.createElement("div");
+        card.className = `news-card ${item.grade || ""}`;
         
-        list.innerHTML = "";
+        const title = item.row["뉴스 제목"] || "";
+        const time = item.row["시간"] || "";
+        const channelName = item.row["채널명"] || "";
+        const stockName = item.row["종목명"] || "";
+        const link = item.row["링크"] || "";
+        
+        // 시간 포맷팅
+        const timeDisplay = parseTime(time);
+        
+        const safeLink = !link || link.includes("stockinfo7.com")
+          ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
+          : link;
 
-        // 데이터 로드 후 로딩 메시지 숨기기
-        if (!data.length) {
-          list.innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-              😢 표시할 뉴스가 없습니다
-            </div>
-          `;
-          return;
-        }
+        const highlightedTitle = keywords.length 
+          ? highlight(title, keywords)
+          : title;
 
-        data.forEach(item => {
-          const card = document.createElement("div");
-          card.className = `news-card ${item.grade || ""}`;
-          
-          const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
-          const latestTime = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
-          const firstTime = item.row["최초 뉴스 시간"] || "";
-          const newsCount = item.row["관련뉴스 수"] || "0";
-          const channelCount = item.row["언급 채널 수"] || "0";
-          const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
-          
-          const safeLink = !link || link.includes("stockinfo7.com")
-            ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
-            : link;
+        card.innerHTML = `
+          <div class="news-title">${highlightedTitle}</div>
+          <div class="news-info">🕒 ${timeDisplay}</div>
+          <div class="news-info">📡 ${channelName}</div>
+          <div class="news-info">🏢 ${stockName}</div>
+          <div class="news-link" style="display:flex; gap:8px; align-items:center;">
+            <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
+            ${(!link || link.includes("stockinfo7.com")) ? 
+              `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
+          </div>
+        `;
 
-          const highlightedTitle = keywords.length 
-            ? highlight(title, keywords)
-            : title;
+        list.appendChild(card);
+      });
 
-          card.innerHTML = `
-            <div class="news-title">${highlightedTitle}</div>
-            <div class="news-info">🕒 최신 ${latestTime}${firstTime ? ` • 최초 ${firstTime}` : ''}</div>
-            <div class="news-info">
-              📡 관련뉴스 ${newsCount}건 / 언급채널 ${channelCount}개
-              ${item.score ? `<span style="font-size:11px; color:#888;">(${item.score}점)</span>` : ''}
-            </div>
-            <div class="news-link" style="display:flex; gap:8px; align-items:center;">
-              <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
-              ${(!link || link.includes("stockinfo7.com")) ? 
-                `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
-            </div>
-          `;
-
-          list.appendChild(card);
-        });
-
-        // 로딩 메시지 숨기기
+      if (targetElement === 'hot-news-list') {
         if (loadingElement) loadingElement.style.display = 'none';
         if (skeletonElement) skeletonElement.style.display = 'none';
       }
@@ -1164,7 +1118,8 @@
             .filter(item => item.grade === currentFilter)
             .sort((a, b) => b.score - a.score);
         
-        renderNewsCards(filtered, "hot-news-list");
+        console.log('필터링된 데이터:', filtered);
+        renderNewsCards(filtered, "hot-news-list", [], false);
     }
 
     // 시간 파싱 함수 추가
@@ -1206,7 +1161,7 @@
             channels.add(channel);
           }
         } catch (e) {
-          console.log("요약 계산 중 오류 발생", e);
+          console.log('요약 계산 중 오류 발생', e);
         }
       });
 
