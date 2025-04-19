@@ -1581,99 +1581,114 @@
         }
     }, 300);
 
+    // 페이지 강제 새로고침 및 캐시 초기화
+    function forceReload() {
+        location.reload(true);
+    }
+
     // 초기화
-    document.addEventListener("DOMContentLoaded", async () => {
-      searchInput = document.getElementById("search-input");
-      const searchButton = document.getElementById("search-button");
-      const clearSearchButton = document.getElementById("clear-search");
-
-      // 검색어 지우기 버튼 이벤트 리스너
-      clearSearchButton.addEventListener('click', () => {
-        searchInput.value = '';
-        document.getElementById("search-results-list").innerHTML = '';
-        document.getElementById("summary").style.display = "none";
-      });
-
-      // 검색창 입력 이벤트 처리
-      searchInput.addEventListener("input", (e) => {
-          // 수동 검색 버튼 활성화
-          searchButton.disabled = false;
-      });
-
-      // 붙여넣기 이벤트 처리
-      searchInput.addEventListener("paste", async (e) => {
-          const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-          if (/^\d{6}$/.test(pastedText)) { // 6자리 숫자인 경우에만 자동 검색
-              await debouncedConvert(pastedText);
-          }
-      });
-
-      // 검색 버튼 클릭 이벤트
-      searchButton.addEventListener('click', () => {
-          handleSearch();
-      });
-
-      // 맨 위로 버튼 이벤트 리스너
-      const scrollButton = document.getElementById('scrollToTop');
-      scrollButton.addEventListener('click', () => {
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      });
-
-      // 스크롤 이벤트 리스너에 쓰로틀 적용
-      window.addEventListener('scroll', throttle(() => {
-        handleScroll();
-      }, 100));
-
-      try {
-        // 시트 목록 먼저 로드
-        const sheetsResponse = await fetch("/sheets");
-        const sheets = await sheetsResponse.json();
-
-        // 종목 정보 로드
-        await loadStockData();
-
-        // DB 데이터 미리 로드
-        await loadDBData();
-
-        // HOT 시트 데이터 로드
-        const hotSheet = sheets.find(s => s.name.includes("HOT"));
-        if (hotSheet) {
-          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`);
-          const hotData = await hotResponse.json();
-          
-          currentData = hotData.map((row, index) => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: index
-          }));
-          
-          currentData = assignGrade(currentData);
-          
-          // URL에서 초기 상태 확인 후 적용
-          initializeFromURL();
-          
-          // URL에 필터나 검색어가 없는 경우 기본 렌더링
-          if (!new URLSearchParams(window.location.search).has('filter') && 
-              !new URLSearchParams(window.location.search).has('search')) {
-            renderNewsCards(currentData, "hot-news-list");
-          }
-        }
-
-        // 주기적 업데이트 시작
-        startPeriodicUpdate();
-
-        // 초기 테마 설정
-        setTheme('light');
-        
-        // 초기 레이아웃을 HOT으로 설정
+    function initializePage() {
+        // 초기 레이아웃을 '뉴스보기'로 설정
         setLayout('hot');
+        // 필터링 기본값을 '매우 중요'로 설정
+        setFilter('top');
+    }
 
-      } catch (error) {
-        console.error("초기 데이터 로드 중 오류:", error);
-      }
+    document.addEventListener("DOMContentLoaded", async () => {
+        searchInput = document.getElementById("search-input");
+        const searchButton = document.getElementById("search-button");
+        const clearSearchButton = document.getElementById("clear-search");
+
+        // 페이지 강제 새로고침 실행
+        forceReload();
+
+        // 페이지 초기화
+        initializePage();
+
+        // 검색어 지우기 버튼 이벤트 리스너
+        clearSearchButton.addEventListener('click', () => {
+            searchInput.value = '';
+            document.getElementById("search-results-list").innerHTML = '';
+            document.getElementById("summary").style.display = "none";
+        });
+
+        // 검색창 입력 이벤트 처리
+        searchInput.addEventListener("input", (e) => {
+            // 수동 검색 버튼 활성화
+            searchButton.disabled = false;
+        });
+
+        // 붙여넣기 이벤트 처리
+        searchInput.addEventListener("paste", async (e) => {
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            if (/^\d{6}$/.test(pastedText)) { // 6자리 숫자인 경우에만 자동 검색
+                await debouncedConvert(pastedText);
+            }
+        });
+
+        // 검색 버튼 클릭 이벤트
+        searchButton.addEventListener('click', () => {
+            handleSearch();
+        });
+
+        // 맨 위로 버튼 이벤트 리스너
+        const scrollButton = document.getElementById('scrollToTop');
+        scrollButton.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // 스크롤 이벤트 리스너에 쓰로틀 적용
+        window.addEventListener('scroll', throttle(() => {
+            handleScroll();
+        }, 100));
+
+        try {
+            // 시트 목록 먼저 로드
+            const sheetsResponse = await fetch("/sheets");
+            const sheets = await sheetsResponse.json();
+
+            // 종목 정보 로드
+            await loadStockData();
+
+            // DB 데이터 미리 로드
+            await loadDBData();
+
+            // HOT 시트 데이터 로드
+            const hotSheet = sheets.find(s => s.name.includes("HOT"));
+            if (hotSheet) {
+                const hotResponse = await fetch(`/sheet/${hotSheet.gid}`);
+                const hotData = await hotResponse.json();
+
+                currentData = hotData.map((row, index) => ({
+                    row,
+                    score: calculateScore(row),
+                    originalIndex: index
+                }));
+
+                currentData = assignGrade(currentData);
+
+                // URL에서 초기 상태 확인 후 적용
+                initializeFromURL();
+
+                // URL에 필터나 검색어가 없는 경우 기본 렌더링
+                if (!new URLSearchParams(window.location.search).has('filter') &&
+                    !new URLSearchParams(window.location.search).has('search')) {
+                    renderNewsCards(currentData, "hot-news-list");
+                }
+            }
+
+            // 주기적 업데이트 시작
+            startPeriodicUpdate();
+
+            // 초기 테마 설정
+            setTheme('light');
+
+        } catch (error) {
+            console.error("초기 데이터 로드 중 오류:", error);
+        }
     });
   </script>
 </body>
