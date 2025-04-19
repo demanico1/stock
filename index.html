@@ -830,42 +830,35 @@
     <div class="left-panel">
       <div class="news-container">
         <h3>📰 HOT 뉴스</h3>
-
-        <!-- ✅ 로딩 메시지 (기본은 보임) -->
-        <div id="hot-news-loading" class="loading-spinner" style="display: block;">
-          <span>뉴스를 불러오는 중</span>
-          <div class="dots">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
+        <div class="news-list" id="hot-news-list">
+          <div class="loading-spinner" id="hot-news-loading">
+            <span>뉴스를 불러오는 중</span>
+            <div class="dots">
+              <div class="dot"></div>
+              <div class="dot"></div>
+              <div class="dot"></div>
+            </div>
           </div>
-        </div>
-
-        <!-- ✅ 스켈레톤 로딩 (기본은 보임) -->
-        <div id="hot-news-skeleton">
-          <div class="skeleton-card">
-            <div class="skeleton-title skeleton-loading"></div>
-            <div class="skeleton-info skeleton-loading"></div>
-            <div class="skeleton-info skeleton-loading"></div>
-            <div class="skeleton-link skeleton-loading"></div>
+          <div id="hot-news-skeleton">
+            <div class="skeleton-card">
+              <div class="skeleton-title skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-link skeleton-loading"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="skeleton-title skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-link skeleton-loading"></div>
+            </div>
+            <div class="skeleton-card">
+              <div class="skeleton-title skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-info skeleton-loading"></div>
+              <div class="skeleton-link skeleton-loading"></div>
+            </div>
           </div>
-          <div class="skeleton-card">
-            <div class="skeleton-title skeleton-loading"></div>
-            <div class="skeleton-info skeleton-loading"></div>
-            <div class="skeleton-info skeleton-loading"></div>
-            <div class="skeleton-link skeleton-loading"></div>
-          </div>
-          <div class="skeleton-card">
-            <div class="skeleton-title skeleton-loading"></div>
-            <div class="skeleton-info skeleton-loading"></div>
-            <div class="skeleton-info skeleton-loading"></div>
-            <div class="skeleton-link skeleton-loading"></div>
-          </div>
-        </div>
-
-        <!-- ✅ 리스트만 JS에서 비움 -->
-        <div id="hot-news-list" class="news-list">
-          <!-- 뉴스 카드가 여기에 들어옴 -->
         </div>
       </div>
     </div>
