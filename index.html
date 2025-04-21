@@ -954,18 +954,77 @@
 
     // 등급 분류 (점수만 계산, 필터링은 하지 않음)
     function assignGrade(rowsWithScore) {
+      // 1. 점수 내림차순 정렬
       const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
-      const total = sorted.length;
-      
-      return sorted.map((item, index) => {
-        const rate = index / total;
-        let grade = "";
-        if (rate < 0.1) grade = "top";
-        else if (rate < 0.3) grade = "mid";
-        else if (rate < 0.5) grade = "low";
-        
-        return { ...item, grade };
+
+      // 2. 동일 점수끼리 그룹화
+      const groups = [];
+      let currentGroup = [];
+      let currentScore = null;
+
+      sorted.forEach(item => {
+        if (currentScore !== item.score) {
+          if (currentGroup.length > 0) groups.push(currentGroup);
+          currentGroup = [item];
+          currentScore = item.score;
+        } else {
+          currentGroup.push(item);
+        }
       });
+      if (currentGroup.length > 0) groups.push(currentGroup);
+
+      // 3. 전체 그룹 수 기반 퍼센트 컷 계산
+      const totalGroups = groups.length;
+      const topMax = Math.floor(totalGroups * 0.1);  // 상위 10%
+      const midMax = Math.floor(totalGroups * 0.3);  // 상위 30%
+      const lowMax = Math.floor(totalGroups * 0.5);  // 상위 50%
+
+      const scoreToGrade = new Map();
+      let groupIndex = 0;
+      let usedTop = 0, usedMid = 0, usedLow = 0;
+
+      while (groupIndex < groups.length) {
+        const group = groups[groupIndex];
+
+        // TOP 할당 (상위 10%)
+        if (usedTop < topMax) {
+          if (usedTop + 1 <= topMax) {
+            group.forEach(item => scoreToGrade.set(item.row.id, 'top'));
+            usedTop++;
+          } else {
+            break; // 소프트 드롭
+          }
+        }
+
+        // MID 할당 (상위 10~30%)
+        else if (usedMid < (midMax - topMax)) {
+          if (usedMid + 1 <= (midMax - topMax)) {
+            group.forEach(item => scoreToGrade.set(item.row.id, 'mid'));
+            usedMid++;
+          } else {
+            break;
+          }
+        }
+
+        // LOW 할당 (상위 30~50%)
+        else if (usedLow < (lowMax - midMax)) {
+          if (usedLow + 1 <= (lowMax - midMax)) {
+            group.forEach(item => scoreToGrade.set(item.row.id, 'low'));
+            usedLow++;
+          } else {
+            break;
+          }
+        }
+
+        // 나머지 등급 없음
+        groupIndex++;
+      }
+
+      // 4. 원본 순서에 맞게 grade 반영
+      return rowsWithScore.map(item => ({
+        ...item,
+        grade: scoreToGrade.get(item.row.id) || ''
+      }));
     }
 
     // 시트 목록을 가져오는 함수 추가
