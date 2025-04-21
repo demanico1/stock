@@ -753,7 +753,7 @@
       <button onclick="setLayout('db')" data-layout="db">검색</button>
       <button onclick="setLayout('split')" data-layout="split" class="active">뉴스+검색</button>
       <button onclick="toggleTheme()" class="theme-toggle">
-        <span class="icon">🌓모드</span>
+        <span class="icon">🌓</span>
       </button>
     </div>
 
@@ -954,13 +954,11 @@
 
     // 등급 분류 (점수만 계산, 필터링은 하지 않음)
     function assignGrade(rowsWithScore) {
-      const total = rowsWithScore.length;
+      const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
+      const total = sorted.length;
       
-      return rowsWithScore.map(item => {
-        const sortedScores = [...rowsWithScore].sort((a, b) => b.score - a.score);
-        const position = sortedScores.findIndex(x => x.score === item.score);
-        const rate = position / total;
-        
+      return sorted.map((item, index) => {
+        const rate = index / total;
         let grade = "";
         if (rate < 0.1) grade = "top";
         else if (rate < 0.3) grade = "mid";
