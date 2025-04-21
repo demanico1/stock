@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light" data-layout="hot">
 <head>
   <meta charset="UTF-8">
-  <title>디마니코 심플 뉴스</title>
+  <title>김성훈 주식 뉴스</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <style>
     :root[data-theme="light"] {
@@ -749,11 +749,11 @@
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
     <div class="layout-buttons">
-      <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
-      <button onclick="setLayout('db')" data-layout="db">DB 영역</button>
-      <button onclick="setLayout('split')" data-layout="split" class="active">5:5 영역</button>
+      <button onclick="setLayout('hot')" data-layout="hot">뉴스만</button>
+      <button onclick="setLayout('db')" data-layout="db">검색만</button>
+      <button onclick="setLayout('split')" data-layout="split" class="active">뉴스+검색</button>
       <button onclick="toggleTheme()" class="theme-toggle">
-        <span class="icon">🌓</span>
+        <span class="icon">🌓모드</span>
       </button>
     </div>
 
@@ -859,18 +859,11 @@
     const UPDATE_CHECK_INTERVAL = 30000; // 30초로 늘림
     let stockCache = null;
 
-    // 캐시 상태 관리 개선
-    let cacheState = {
-      db: {
-        data: null,
-        lastUpdate: null,
-        isUpdating: false
-      },
-      hot: {
-        data: null,
-        lastUpdate: null,
-        isUpdating: false
-      }
+    // 시트 목록 캐시 추가
+    let sheetsCache = {
+      data: null,
+      lastUpdate: null,
+      currentDate: null
     };
 
     // 요청 제어 시스템 추가
@@ -965,18 +958,53 @@
       });
     }
 
-    // DB 시트 찾기
-    async function findDbSheet() {
+    // 시트 목록을 가져오는 함수 추가
+    async function getSheets() {
+      const today = new Date();
+      const currentDate = `${today.getMonth() + 1}.${today.getDate()}`;
+      
+      // 캐시가 있고, 같은 날짜면 캐시 사용
+      if (sheetsCache.data && sheetsCache.currentDate === currentDate) {
+        console.log('시트 목록 캐시 사용');
+        return sheetsCache.data;
+      }
+
       try {
+        console.log('시트 목록 새로 가져오기');
         const response = await fetch("/sheets");
+        if (!response.ok) {
+          throw new Error('시트 목록 조회 실패');
+        }
+        
         const sheets = await response.json();
         
-        // 오늘 날짜 구하기
+        // 캐시 업데이트
+        sheetsCache = {
+          data: sheets,
+          lastUpdate: Date.now(),
+          currentDate: currentDate
+        };
+        
+        return sheets;
+      } catch (error) {
+        console.error('시트 목록 로드 실패:', error);
+        // 캐시된 데이터라도 있으면 반환
+        return sheetsCache.data || null;
+      }
+    }
+
+    // DB 시트 찾기 함수 수정
+    async function findDbSheet() {
+      try {
+        const sheets = await getSheets();
+        if (!sheets) {
+          throw new Error('시트 목록을 가져올 수 없습니다.');
+        }
+        
         const today = new Date();
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const date = String(today.getDate()).padStart(2, '0');
         
-        // 오늘 날짜와 'DB'가 포함된 시트 찾기
         const dbSheet = sheets.find(s => {
           const sheetName = s.name.toLowerCase();
           return sheetName.includes('db') && 
@@ -1452,13 +1480,11 @@
     // findHotSheet 함수 수정
     async function findHotSheet() {
       try {
-        const response = await fetch("/sheets");
-        if (!response.ok) {
-          console.log('시트 목록 조회 실패 - 잠시 후 다시 시도합니다');
-          return null;  // 실패시 null 반환
+        const sheets = await getSheets();
+        if (!sheets) {
+          console.log('시트 목록을 가져올 수 없습니다');
+          return null;
         }
-        
-        const sheets = await response.json();
         
         const today = new Date();
         const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -1482,7 +1508,7 @@
         return hotSheet;
       } catch (error) {
         console.log('시트 검색 중 일시적인 오류 발생');
-        return null;  // 에러시 null 반환
+        return null;
       }
     }
 
@@ -1666,8 +1692,11 @@
     // 종목 정보 시트 찾기
     async function findStockSheet() {
       try {
-        const response = await fetch("/sheets");
-        const sheets = await response.json();
+        const sheets = await getSheets();
+        if (!sheets) {
+          throw new Error("시트 목록을 가져올 수 없습니다.");
+        }
+        
         const stockSheet = sheets.find(s => s.name === "종목정보");
         
         if (!stockSheet) {
@@ -1785,8 +1814,7 @@
 
       try {
         // 시트 목록 먼저 로드
-        const sheetsResponse = await fetch("/sheets");
-        const sheets = await sheetsResponse.json();
+        await getSheets();
 
         // 종목 정보 로드
         await loadStockData();
