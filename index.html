@@ -952,34 +952,47 @@
       return score;
     }
 
-    // 등급 분류 (점수 컷 기준, 동점자는 동일 등급 유지 + 하위 70% 등급 없음)
+    // 등급 분류 (고유 점수 분포 기반 등급 할당)
     function assignGrade(rowsWithScore) {
       // 1. 점수 내림차순 정렬
       const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
-      const total = sorted.length;
+      
+      // 2. 고유 점수 분포 리스트 생성
+      const uniqueScores = [...new Set(sorted.map(item => item.score))];
+      const scoreGroups = uniqueScores.map(score => ({
+        score,
+        items: sorted.filter(item => item.score === score)
+      }));
 
-      // 2. 퍼센타일 컷 기준 점수 계산 함수
-      const getScoreCut = (percent) => {
-        const index = Math.floor(total * percent);
-        return sorted[index]?.score ?? -1;
-      };
+      // 3. 고유 점수 갯수에 따른 등급 컷 정의 (15/30/50% 비율)
+      const scoreCount = uniqueScores.length;
+      const topEnd = Math.floor(scoreCount * 0.15);    // 상위 15%
+      const midEnd = Math.floor(scoreCount * 0.30);    // 상위 30%
+      const lowEnd = Math.floor(scoreCount * 0.50);    // 상위 50%
 
-      // 3. 각 컷 점수 계산
-      const topScore = getScoreCut(0.1);   // 상위 10%
-      const midScore = getScoreCut(0.2);   // 상위 20%
-      const lowScore = getScoreCut(0.3);   // 상위 30%
+      // 4. 등급 할당 (누적 뉴스 수 기준)
+      const gradeMap = new Map();
+      let currentRank = 1;
 
-      // 4. 등급 할당 (동점자 동일 등급, 나머지 등급 없음)
-      return rowsWithScore.map(item => {
-        const score = item.score;
+      for (const group of scoreGroups) {
         const grade =
-          score >= topScore ? 'top' :
-          score >= midScore ? 'mid' :
-          score >= lowScore ? 'low' :
-          ''; // 등급 없음 (하이라이트 없음)
+          currentRank <= topEnd ? 'top' :
+          currentRank <= midEnd ? 'mid' :
+          currentRank <= lowEnd ? 'low' : '';
+        
+        for (const item of group.items) {
+          gradeMap.set(item, grade);
+        }
 
-        return { ...item, grade };
-      });
+        // 실제 등수는 뉴스 수만큼 누적
+        currentRank += group.items.length;
+      }
+
+      // 5. 원본 순서 유지하며 등급 반영
+      return sorted.map(item => ({
+        ...item,
+        grade: gradeMap.get(item) || ''
+      }));
     }
 
     // 시트 목록을 가져오는 함수 추가
