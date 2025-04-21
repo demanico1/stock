@@ -856,7 +856,7 @@
     const DB_UPDATE_INTERVAL = 300000; // 5분
     const HOT_UPDATE_INTERVAL = 300000; // 5분
     let lastDataTimestamp = null;
-    const UPDATE_CHECK_INTERVAL = 15000; // 15초마다 업데이트 체크
+    const UPDATE_CHECK_INTERVAL = 30000; // 30초로 늘림
     let stockCache = null;
 
     // 캐시 상태 관리 개선
@@ -1035,6 +1035,22 @@
     function renderNewsCards(data, targetElement, keywords = []) {
       const list = document.getElementById(targetElement);
       
+      // HOT 뉴스 영역일 때는 데이터가 없으면 바로 메시지 표시
+      if (targetElement === 'hot-news-list' && (!data || data.length === 0)) {
+        const loadingElement = document.getElementById('hot-news-loading');
+        const skeletonElement = document.getElementById('hot-news-skeleton');
+        
+        if (loadingElement) loadingElement.style.display = 'none';
+        if (skeletonElement) skeletonElement.style.display = 'none';
+        
+        list.innerHTML = `
+          <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
+            😢 아직 HOT 뉴스가 없습니다
+          </div>
+        `;
+        return;
+      }
+
       if (targetElement === 'search-results-list') {
         // DB 검색 결과 렌더링
         list.innerHTML = "";
@@ -1433,23 +1449,25 @@
       }
     }
 
-    // HOT 시트 찾기 함수 수정
+    // findHotSheet 함수 수정
     async function findHotSheet() {
       try {
         const response = await fetch("/sheets");
+        if (!response.ok) {
+          console.log('시트 목록 조회 실패 - 잠시 후 다시 시도합니다');
+          return null;  // 실패시 null 반환
+        }
+        
         const sheets = await response.json();
         
-        // 오늘 날짜와 요일 구하기
         const today = new Date();
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const date = String(today.getDate()).padStart(2, '0');
         const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
         const weekday = weekdays[today.getDay()];
         
-        // 날짜 패턴 생성 (예: "04.22(화)")
         const datePattern = `${month}.${date}(${weekday})`;
         
-        // 날짜 패턴과 'HOT'이 포함된 시트 찾기
         const hotSheet = sheets.find(s => {
           const sheetName = s.name.toLowerCase();
           return sheetName.includes('hot') && 
@@ -1457,40 +1475,43 @@
         });
 
         if (!hotSheet) {
-          throw new Error(`${datePattern} HOT 시트를 찾을 수 없습니다.`);
+          console.log('HOT 시트가 아직 준비되지 않았습니다');
+          return null;
         }
 
-        console.log('HOT 시트 찾음:', hotSheet.name);
         return hotSheet;
       } catch (error) {
-        console.error('HOT 시트 검색 실패:', error);
-        throw error;
+        console.log('시트 검색 중 일시적인 오류 발생');
+        return null;  // 에러시 null 반환
       }
     }
 
-    // HOT 데이터 로드 함수 수정
+    // loadHotData 함수 수정
     async function loadHotData(force = false) {
-      // 강제 로드가 아니고, 캐시가 있고, 마지막 업데이트가 5분 이내라면 캐시 사용
-      if (!force && hotDataCache && lastHotUpdate && (Date.now() - lastHotUpdate < HOT_UPDATE_INTERVAL)) {
+      if (!force && hotDataCache && lastHotUpdate && 
+          (Date.now() - lastHotUpdate < HOT_UPDATE_INTERVAL)) {
         return hotDataCache;
       }
 
       try {
         const hotSheet = await findHotSheet();
-        const response = await fetch(`/sheet/${hotSheet.gid}`);
+        if (!hotSheet) {
+          return [];  // 시트가 없으면 빈 배열 반환
+        }
         
+        const response = await fetch(`/sheet/${hotSheet.gid}`);
         if (!response.ok) {
-          throw new Error(`API 오류: ${response.status}`);
+          console.log('HOT 데이터 로드 실패 - 잠시 후 다시 시도합니다');
+          return [];
         }
         
         hotDataCache = await response.json();
         lastHotUpdate = Date.now();
         
-        console.log('HOT 데이터 로드 완료:', hotDataCache?.length || 0, '건');
         return hotDataCache;
       } catch (error) {
-        console.error('HOT 데이터 로드 실패:', error);
-        throw error;
+        console.log('HOT 데이터 로드 중 일시적인 오류 발생');
+        return [];  // 에러시 빈 배열 반환
       }
     }
 
@@ -1810,4 +1831,4 @@
     });
   </script>
 </body>
-</html> 
+</html>
