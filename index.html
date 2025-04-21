@@ -1433,26 +1433,31 @@
       }
     }
 
-    // HOT 시트 찾기 함수 추가
+    // HOT 시트 찾기 함수 수정
     async function findHotSheet() {
       try {
         const response = await fetch("/sheets");
         const sheets = await response.json();
         
-        // 오늘 날짜 구하기
+        // 오늘 날짜와 요일 구하기
         const today = new Date();
         const month = String(today.getMonth() + 1).padStart(2, '0');
         const date = String(today.getDate()).padStart(2, '0');
+        const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+        const weekday = weekdays[today.getDay()];
         
-        // 오늘 날짜와 'HOT'이 포함된 시트 찾기
+        // 날짜 패턴 생성 (예: "04.22(화)")
+        const datePattern = `${month}.${date}(${weekday})`;
+        
+        // 날짜 패턴과 'HOT'이 포함된 시트 찾기
         const hotSheet = sheets.find(s => {
           const sheetName = s.name.toLowerCase();
           return sheetName.includes('hot') && 
-                 sheetName.includes(`${month}.${date}`);
+                 sheetName.includes(datePattern);
         });
 
         if (!hotSheet) {
-          throw new Error(`${month}.${date} HOT 시트를 찾을 수 없습니다.`);
+          throw new Error(`${datePattern} HOT 시트를 찾을 수 없습니다.`);
         }
 
         console.log('HOT 시트 찾음:', hotSheet.name);
