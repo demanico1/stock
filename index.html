@@ -954,23 +954,18 @@
 
     // 등급 분류 (점수만 계산, 필터링은 하지 않음)
     function assignGrade(rowsWithScore) {
-      const sorted = [...rowsWithScore].slice().sort((a, b) => b.score - a.score);
+      const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
       const total = sorted.length;
-
-      const scoreToGrade = new Map();
-      sorted.forEach((item, index) => {
+      
+      return sorted.map((item, index) => {
         const rate = index / total;
-        let grade = '';
-        if (rate < 0.1) grade = 'top';
-        else if (rate < 0.3) grade = 'mid';
-        else if (rate < 0.5) grade = 'low';
-        scoreToGrade.set(item.row.id, grade);
+        let grade = "";
+        if (rate < 0.1) grade = "top";
+        else if (rate < 0.3) grade = "mid";
+        else if (rate < 0.5) grade = "low";
+        
+        return { ...item, grade };
       });
-
-      return rowsWithScore.map(item => ({
-        ...item,
-        grade: scoreToGrade.get(item.row.id) || ''
-      }));
     }
 
     // 시트 목록을 가져오는 함수 추가
@@ -1242,8 +1237,9 @@
     // 필터링된 데이터 렌더링
     function renderFilteredData(data) {
         if (currentFilter === "all") {
-            // 전체: 원본 순서 유지
-            renderNewsCards(data, "hot-news-list");
+            // 전체: 원본 시트 순서 유지 (originalIndex 기준)
+            const originalOrder = [...data].sort((a, b) => a.originalIndex - b.originalIndex);
+            renderNewsCards(originalOrder, "hot-news-list");
             return;
         }
 
