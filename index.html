@@ -1433,30 +1433,56 @@
       }
     }
 
-    // HOT 데이터 로드 함수 추가
+    // HOT 시트 찾기 함수 추가
+    async function findHotSheet() {
+      try {
+        const response = await fetch("/sheets");
+        const sheets = await response.json();
+        
+        // 오늘 날짜 구하기
+        const today = new Date();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const date = String(today.getDate()).padStart(2, '0');
+        
+        // 오늘 날짜와 'HOT'이 포함된 시트 찾기
+        const hotSheet = sheets.find(s => {
+          const sheetName = s.name.toLowerCase();
+          return sheetName.includes('hot') && 
+                 sheetName.includes(`${month}.${date}`);
+        });
+
+        if (!hotSheet) {
+          throw new Error(`${month}.${date} HOT 시트를 찾을 수 없습니다.`);
+        }
+
+        console.log('HOT 시트 찾음:', hotSheet.name);
+        return hotSheet;
+      } catch (error) {
+        console.error('HOT 시트 검색 실패:', error);
+        throw error;
+      }
+    }
+
+    // HOT 데이터 로드 함수 수정
     async function loadHotData(force = false) {
-      // 강제 로드가 아니고, 캐시가 있고, 마지막 업데이트가 1분 이내라면 캐시 사용
+      // 강제 로드가 아니고, 캐시가 있고, 마지막 업데이트가 5분 이내라면 캐시 사용
       if (!force && hotDataCache && lastHotUpdate && (Date.now() - lastHotUpdate < HOT_UPDATE_INTERVAL)) {
         return hotDataCache;
       }
 
       try {
-        const sheetsResponse = await fetch("/sheets");
-        const sheets = await sheetsResponse.json();
-        const hotSheet = sheets.find(s => s.name.includes("HOT"));
-        
-        if (!hotSheet) {
-          throw new Error('HOT 시트를 찾을 수 없습니다.');
-        }
-
+        const hotSheet = await findHotSheet();
         const response = await fetch(`/sheet/${hotSheet.gid}`);
-        const hotData = await response.json();
         
-        hotDataCache = hotData;
+        if (!response.ok) {
+          throw new Error(`API 오류: ${response.status}`);
+        }
+        
+        hotDataCache = await response.json();
         lastHotUpdate = Date.now();
         
-        console.log('HOT 데이터 로드 완료:', hotData?.length || 0, '건');
-        return hotData;
+        console.log('HOT 데이터 로드 완료:', hotDataCache?.length || 0, '건');
+        return hotDataCache;
       } catch (error) {
         console.error('HOT 데이터 로드 실패:', error);
         throw error;
@@ -1743,14 +1769,9 @@
         await loadDBData();
 
         // HOT 데이터 미리 로드
-        await loadHotData();
-
-        // HOT 시트 데이터 로드
-        const hotSheet = sheets.find(s => s.name.includes("HOT"));
-        if (hotSheet) {
-          const hotResponse = await fetch(`/sheet/${hotSheet.gid}`);
-          const hotData = await hotResponse.json();
-          
+        const hotData = await loadHotData();
+        
+        if (hotData) {
           currentData = hotData.map((row, index) => ({
             row,
             score: calculateScore(row),
