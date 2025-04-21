@@ -961,7 +961,6 @@
       const groups = [];
       let currentGroup = [];
       let currentScore = null;
-
       for (const item of sorted) {
         if (item.score !== currentScore) {
           if (currentGroup.length > 0) groups.push(currentGroup);
@@ -973,35 +972,44 @@
       }
       if (currentGroup.length > 0) groups.push(currentGroup);
 
-      // 3. 슬라이딩 방식 등급 부여
-      const gradeLimit = 20;  // 최대 20개
-      const gradeMin = 10;    // 최소 10개
+      // 3. 비율 범위 계산
+      const total = sorted.length;
+      const topMax = Math.floor(total * 0.1);  // 상위 10%
+      const midMax = Math.floor(total * 0.2);  // 상위 20%
+      const lowMax = Math.floor(total * 0.3);  // 상위 30%
+
       const scoreToGrade = new Map();
+      let i = 0;
 
-      // 슬라이딩 등급 할당 함수
-      const assignSliding = (startIndex, label) => {
-        let count = 0;
-        let i = startIndex;
-        while (i < groups.length) {
-          const group = groups[i];
-          if (count < gradeMin || (count + group.length <= gradeLimit)) {
-            group.forEach(item => scoreToGrade.set(item.row.id, label));
-            count += group.length;
-            i++;
-          } else {
-            break;
-          }
+      // 4. top 등급 할당 (상위 0~10%)
+      let topCount = 0;
+      if (topMax > 0) {
+        while (i < groups.length && topCount + groups[i].length <= topMax) {
+          groups[i].forEach(item => scoreToGrade.set(item.row.id, 'top'));
+          topCount += groups[i].length;
+          i++;
         }
-        return i;
-      };
+      }
 
-      // 순차적으로 등급 부여
-      let idx = 0;
-      idx = assignSliding(idx, 'top');
-      idx = assignSliding(idx, 'mid');
-      idx = assignSliding(idx, 'low');
+      // 5. mid 등급 할당 (상위 10~20%)
+      let midCount = 0;
+      const midLimit = midMax - topCount;
+      while (i < groups.length && midCount + groups[i].length <= midLimit) {
+        groups[i].forEach(item => scoreToGrade.set(item.row.id, 'mid'));
+        midCount += groups[i].length;
+        i++;
+      }
 
-      // 4. 원본 순서 유지하며 등급 반영
+      // 6. low 등급 할당 (상위 20~30%)
+      let lowCount = 0;
+      const lowLimit = lowMax - (topCount + midCount);
+      while (i < groups.length && lowCount + groups[i].length <= lowLimit) {
+        groups[i].forEach(item => scoreToGrade.set(item.row.id, 'low'));
+        lowCount += groups[i].length;
+        i++;
+      }
+
+      // 7. 원본 순서 유지하며 등급 반영
       return rowsWithScore.map(item => ({
         ...item,
         grade: scoreToGrade.get(item.row.id) || ''
