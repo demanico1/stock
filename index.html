@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light" data-layout="hot">
 <head>
   <meta charset="UTF-8">
-  <title>김성훈 주식 스카우터</title>
+  <title>디마니코 심플 뉴스</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <style>
     :root[data-theme="light"] {
@@ -749,9 +749,9 @@
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
     <div class="layout-buttons">
-      <button onclick="setLayout('hot')" data-layout="hot">뉴스</button>
-      <button onclick="setLayout('db')" data-layout="db">검색</button>
-      <button onclick="setLayout('split')" data-layout="split" class="active">뉴스+검색</button>
+      <button onclick="setLayout('hot')" data-layout="hot">HOT 영역</button>
+      <button onclick="setLayout('db')" data-layout="db">DB 영역</button>
+      <button onclick="setLayout('split')" data-layout="split" class="active">5:5 영역</button>
       <button onclick="toggleTheme()" class="theme-toggle">
         <span class="icon">🌓</span>
       </button>
@@ -952,57 +952,33 @@
       return score;
     }
 
-    // 등급 분류 (점수만 계산, 필터링은 하지 않음)
+    // 등급 분류 (점수 컷 기준, 동점자는 동일 등급 유지)
     function assignGrade(rowsWithScore) {
       // 1. 점수 내림차순 정렬
       const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
-
-      // 2. 동일 점수 그룹화
-      const groups = [];
-      let currentGroup = [];
-      let currentScore = null;
-      for (const item of sorted) {
-        if (item.score !== currentScore) {
-          if (currentGroup.length > 0) groups.push(currentGroup);
-          currentGroup = [item];
-          currentScore = item.score;
-        } else {
-          currentGroup.push(item);
-        }
-      }
-      if (currentGroup.length > 0) groups.push(currentGroup);
-
-      // 3. 비율 범위 계산
       const total = sorted.length;
-      const topLimit = Math.floor(total * 0.1);  // 상위 10%
-      const midLimit = Math.floor(total * 0.2);  // 상위 20%
-      const lowLimit = Math.floor(total * 0.3);  // 상위 30%
 
-      const scoreToGrade = new Map();
-      let count = 0;
-      let i = 0;
-
-      // 4. 슬라이딩 방식 등급 할당 함수
-      const assignSliding = (limit, label) => {
-        let assigned = 0;
-        while (i < groups.length && assigned + groups[i].length <= limit) {
-          groups[i].forEach(item => scoreToGrade.set(item.row.id, label));
-          assigned += groups[i].length;
-          count += groups[i].length;
-          i++;
-        }
+      // 2. 퍼센타일 컷 기준 점수 계산
+      const getScoreCut = (percent) => {
+        const index = Math.floor(total * percent);
+        return sorted[index]?.score ?? -1;
       };
 
-      // 5. 순차적 등급 할당
-      assignSliding(topLimit, 'top');
-      assignSliding(midLimit - count, 'mid');
-      assignSliding(lowLimit - count, 'low');
+      // 상위 10% 이상: top / 상위 30% 이상: mid / 나머지: low
+      const topScore = getScoreCut(0.1);    // top 기준 컷
+      const midScore = getScoreCut(0.3);    // mid 기준 컷 (top + mid 합산)
 
-      // 6. 원본 순서 유지하며 등급 반영
-      return rowsWithScore.map(item => ({
-        ...item,
-        grade: scoreToGrade.get(item.row.id) || ''
-      }));
+      // 3. 점수 기준으로 등급 할당 (동점자 일괄 등급)
+      return rowsWithScore.map(item => {
+        const score = item.score;
+        const grade = score >= topScore
+          ? 'top'
+          : score >= midScore
+          ? 'mid'
+          : 'low';
+
+        return { ...item, grade };
+      });
     }
 
     // 시트 목록을 가져오는 함수 추가
