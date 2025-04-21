@@ -1314,13 +1314,16 @@
         const searchTerms = Array.isArray(keywords) ? keywords : keywords.split(" ");
         const results = data
           .filter(row => {
-            const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
-            const stockName = row["종목명"] || "";
-            return searchTerms.some(k => {
+            const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
+            const stockName = (row["종목명"] || "").toLowerCase();
+            
+            // 모든 검색어가 제목이나 종목명에 포함되어야 함 (AND 조건)
+            return searchTerms.every(k => {
+              const term = k.toLowerCase();
               const stockNameFromCode = stockMap[k];
-              return title.toLowerCase().includes(k.toLowerCase()) || 
-                     stockName.toLowerCase().includes(k.toLowerCase()) ||
-                     (stockNameFromCode && stockName.includes(stockNameFromCode));
+              return title.includes(term) || 
+                     stockName.includes(term) ||
+                     (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
             });
           })
           .map(row => ({ row }));
@@ -1329,13 +1332,15 @@
           const freshData = await loadDBData(true);
           const freshResults = freshData
             .filter(row => {
-              const title = row["뉴스 제목"] || row["대표 뉴스 제목"] || "";
-              const stockName = row["종목명"] || "";
-              return searchTerms.some(k => {
+              const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
+              const stockName = (row["종목명"] || "").toLowerCase();
+              
+              return searchTerms.every(k => {
+                const term = k.toLowerCase();
                 const stockNameFromCode = stockMap[k];
-                return title.toLowerCase().includes(k.toLowerCase()) || 
-                       stockName.toLowerCase().includes(k.toLowerCase()) ||
-                       (stockNameFromCode && stockName.includes(stockNameFromCode));
+                return title.includes(term) || 
+                       stockName.includes(term) ||
+                       (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
               });
             })
             .map(row => ({ row }));
