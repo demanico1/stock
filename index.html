@@ -1526,7 +1526,7 @@
       }
     }
 
-    // HOT 데이터 업데이트 체크 함수 추가
+    // HOT 데이터 업데이트 체크 함수 수정
     async function checkHotDataUpdate() {
       try {
         const newHotData = await loadHotData(true);
@@ -1538,25 +1538,47 @@
             originalIndex: index
           }));
           currentData = assignGrade(currentData);
+          renderFilteredData(currentData);
           return false;
         }
 
-        // 새로운 데이터가 있는지 확인
-        const currentTitles = new Set(currentData.map(item => item.row["대표 뉴스 제목"] || item.row["뉴스 제목"]));
-        const newItems = newHotData.filter(item => 
-          !currentTitles.has(item["대표 뉴스 제목"] || item["뉴스 제목"])
+        // 새로운 데이터가 있는지 확인 (시간과 제목으로 비교)
+        const currentItems = new Set(
+          currentData.map(item => {
+            const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
+            const time = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
+            return `${title}|${time}`;
+          })
         );
+
+        const newItems = newHotData.filter(item => {
+          const title = item["대표 뉴스 제목"] || item["뉴스 제목"] || "";
+          const time = item["최신 뉴스 시간"] || item["시간"] || "";
+          return !currentItems.has(`${title}|${time}`);
+        });
         
         if (newItems.length > 0) {
           console.log('HOT 뉴스 업데이트:', newItems.length, '건 추가');
           
+          // 새로운 아이템을 현재 데이터에 추가
           const newItemsWithScore = newItems.map(row => ({
             row,
             score: calculateScore(row),
             originalIndex: currentData.length
           }));
 
-          currentData = assignGrade([...currentData, ...newItemsWithScore]);
+          // 현재 데이터와 새로운 데이터를 합치고 등급 재할당
+          currentData = [...currentData, ...newItemsWithScore];
+          currentData = assignGrade(currentData);
+
+          // 시간 순으로 정렬 (최신순)
+          currentData.sort((a, b) => {
+            const timeA = new Date(a.row["최신 뉴스 시간"] || a.row["시간"] || 0);
+            const timeB = new Date(b.row["최신 뉴스 시간"] || b.row["시간"] || 0);
+            return timeB - timeA;
+          });
+
+          // 필터링된 데이터 렌더링
           renderFilteredData(currentData);
           
           showToastNotification(`${newItems.length}개의 HOT 뉴스가 추가되었습니다`);
