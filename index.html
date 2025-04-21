@@ -749,8 +749,8 @@
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
     <div class="layout-buttons">
-      <button onclick="setLayout('hot')" data-layout="hot">뉴스만</button>
-      <button onclick="setLayout('db')" data-layout="db">검색만</button>
+      <button onclick="setLayout('hot')" data-layout="hot">뉴스</button>
+      <button onclick="setLayout('db')" data-layout="db">검색</button>
       <button onclick="setLayout('split')" data-layout="split" class="active">뉴스+검색</button>
       <button onclick="toggleTheme()" class="theme-toggle">
         <span class="icon">🌓모드</span>
@@ -864,6 +864,18 @@
       data: null,
       lastUpdate: null,
       currentDate: null
+    };
+
+    // DB와 HOT 데이터 업데이트 상태 관리
+    let updateState = {
+      db: {
+        isUpdating: false,
+        lastUpdate: null
+      },
+      hot: {
+        isUpdating: false,
+        lastUpdate: null
+      }
     };
 
     // 요청 제어 시스템 추가
@@ -1588,24 +1600,30 @@
         // DB와 HOT 데이터를 번갈아가며 체크
         const checkDB = async () => {
           return requestController.addToQueue(async () => {
-            if (cacheState.db.isUpdating) return;
-            cacheState.db.isUpdating = true;
+            if (updateState.db.isUpdating) return;
+            updateState.db.isUpdating = true;
             try {
               await loadDataWithRetry(() => checkForNewData());
+            } catch (error) {
+              console.error('DB 데이터 체크 중 오류:', error);
             } finally {
-              cacheState.db.isUpdating = false;
+              updateState.db.isUpdating = false;
+              updateState.db.lastUpdate = Date.now();
             }
           });
         };
 
         const checkHot = async () => {
           return requestController.addToQueue(async () => {
-            if (cacheState.hot.isUpdating) return;
-            cacheState.hot.isUpdating = true;
+            if (updateState.hot.isUpdating) return;
+            updateState.hot.isUpdating = true;
             try {
               await loadDataWithRetry(() => checkHotDataUpdate());
+            } catch (error) {
+              console.error('HOT 데이터 체크 중 오류:', error);
             } finally {
-              cacheState.hot.isUpdating = false;
+              updateState.hot.isUpdating = false;
+              updateState.hot.lastUpdate = Date.now();
             }
           });
         };
