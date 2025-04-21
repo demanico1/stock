@@ -2,7 +2,7 @@
 <html lang="ko" data-theme="light" data-layout="hot">
 <head>
   <meta charset="UTF-8">
-  <title>김성훈 주식 뉴스</title>
+  <title>김성훈 주식 스카우터</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <style>
     :root[data-theme="light"] {
@@ -954,18 +954,23 @@
 
     // 등급 분류 (점수만 계산, 필터링은 하지 않음)
     function assignGrade(rowsWithScore) {
-      const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
+      const sorted = [...rowsWithScore].slice().sort((a, b) => b.score - a.score);
       const total = sorted.length;
-      
-      return sorted.map((item, index) => {
+
+      const scoreToGrade = new Map();
+      sorted.forEach((item, index) => {
         const rate = index / total;
-        let grade = "";
-        if (rate < 0.1) grade = "top";
-        else if (rate < 0.3) grade = "mid";
-        else if (rate < 0.5) grade = "low";
-        
-        return { ...item, grade };
+        let grade = '';
+        if (rate < 0.1) grade = 'top';
+        else if (rate < 0.3) grade = 'mid';
+        else if (rate < 0.5) grade = 'low';
+        scoreToGrade.set(item.row.id, grade);
       });
+
+      return rowsWithScore.map(item => ({
+        ...item,
+        grade: scoreToGrade.get(item.row.id) || ''
+      }));
     }
 
     // 시트 목록을 가져오는 함수 추가
