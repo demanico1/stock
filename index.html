@@ -736,55 +736,9 @@
       }
     }
 
-    /* 토스트 알림 스타일 추가 */
+    /* 토스트 알림 스타일 제거 */
     .toast-notification {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: var(--card-bg);
-      padding: 12px 24px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      z-index: 1000;
-      border: 1px solid var(--border-color);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      animation: slideIn 0.3s ease-out;
-    }
-
-    .toast-content {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .toast-icon {
-      font-size: 16px;
-    }
-
-    .toast-message {
-      color: var(--text-color);
-      font-size: 14px;
-    }
-
-    .toast-close {
-      background: none;
-      border: none;
-      color: var(--text-secondary);
-      cursor: pointer;
-      padding: 4px;
-      font-size: 14px;
-    }
-
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-
-    @keyframes slideOut {
-      from { transform: translateX(0); opacity: 1; }
-      to { transform: translateX(100%); opacity: 0; }
+      display: none;  /* 토스트 알림 숨김 처리 */
     }
   </style>
 </head>
@@ -1433,32 +1387,10 @@
         }
     }
 
-    // 토스트 알림 표시 함수
+    // 토스트 알림 표시 함수 수정 (빈 함수로 변경)
     function showToastNotification(message) {
-      // 기존 알림이 있다면 제거
-      const existingToast = document.querySelector('.toast-notification');
-      if (existingToast) {
-        existingToast.remove();
-      }
-
-      // 새 알림 생성
-      const toast = document.createElement('div');
-      toast.className = 'toast-notification';
-      toast.innerHTML = `
-        <div class="toast-content">
-          <span class="toast-icon">🔔</span>
-          <span class="toast-message">${message}</span>
-          <button class="toast-close" onclick="this.parentElement.parentElement.remove()">✕</button>
-        </div>
-      `;
-
-      // 5초 후 자동 제거
-      setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => toast.remove(), 300);
-      }, 5000);
-
-      document.body.appendChild(toast);
+      // 알림 기능 제거
+      console.log('업데이트:', message);  // 콘솔에만 로그 남김
     }
 
     // 데이터 변경 확인 함수
@@ -1529,66 +1461,38 @@
     // HOT 데이터 업데이트 체크 함수 수정
     async function checkHotDataUpdate() {
       try {
+        // 전체 데이터를 새로 가져옴
         const newHotData = await loadHotData(true);
         
-        if (!currentData || !Array.isArray(currentData)) {
-          currentData = newHotData.map((row, index) => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: index
-          }));
-          currentData = assignGrade(currentData);
-          renderFilteredData(currentData);
+        if (!newHotData || !Array.isArray(newHotData)) {
+          console.error('HOT 데이터 로드 실패');
           return false;
         }
 
-        // 새로운 데이터가 있는지 확인 (시간과 제목으로 비교)
-        const currentItems = new Set(
-          currentData.map(item => {
-            const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
-            const time = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
-            return `${title}|${time}`;
-          })
-        );
+        // 새로운 데이터로 전체 교체
+        currentData = newHotData.map((row, index) => ({
+          row,
+          score: calculateScore(row),
+          originalIndex: index
+        }));
 
-        const newItems = newHotData.filter(item => {
-          const title = item["대표 뉴스 제목"] || item["뉴스 제목"] || "";
-          const time = item["최신 뉴스 시간"] || item["시간"] || "";
-          return !currentItems.has(`${title}|${time}`);
+        // 시간 순으로 정렬 (최신순)
+        currentData.sort((a, b) => {
+          const timeA = new Date(a.row["최신 뉴스 시간"] || a.row["시간"] || 0);
+          const timeB = new Date(b.row["최신 뉴스 시간"] || b.row["시간"] || 0);
+          return timeB - timeA;
         });
+
+        // 등급 할당
+        currentData = assignGrade(currentData);
         
-        if (newItems.length > 0) {
-          console.log('HOT 뉴스 업데이트:', newItems.length, '건 추가');
-          
-          // 새로운 아이템을 현재 데이터에 추가
-          const newItemsWithScore = newItems.map(row => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: currentData.length
-          }));
-
-          // 현재 데이터와 새로운 데이터를 합치고 등급 재할당
-          currentData = [...currentData, ...newItemsWithScore];
-          currentData = assignGrade(currentData);
-
-          // 시간 순으로 정렬 (최신순)
-          currentData.sort((a, b) => {
-            const timeA = new Date(a.row["최신 뉴스 시간"] || a.row["시간"] || 0);
-            const timeB = new Date(b.row["최신 뉴스 시간"] || b.row["시간"] || 0);
-            return timeB - timeA;
-          });
-
-          // 필터링된 데이터 렌더링
-          renderFilteredData(currentData);
-          
-          showToastNotification(`${newItems.length}개의 HOT 뉴스가 추가되었습니다`);
-          return true;
-        }
+        // 필터링된 데이터 렌더링
+        renderFilteredData(currentData);
         
-        console.log('HOT 뉴스 업데이트 확인 완료 - 새로운 뉴스 없음');
-        return false;
+        console.log('HOT 데이터 업데이트 완료:', currentData.length, '건');
+        return true;
       } catch (error) {
-        console.error('HOT 뉴스 업데이트 확인 중 오류:', error);
+        console.error('HOT 데이터 업데이트 중 오류:', error);
         return false;
       }
     }
@@ -1623,9 +1527,9 @@
           });
         };
 
-        // 번갈아가며 실행
+        // 번갈아가며 실행 (시간 간격 늘림)
         await checkDB();
-        setTimeout(checkHot, 5000); // 5초 후 HOT 체크
+        setTimeout(checkHot, 7000); // 7초 후 HOT 체크 (간격 늘림)
       }, UPDATE_CHECK_INTERVAL);
     }
 
