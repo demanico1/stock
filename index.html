@@ -974,42 +974,31 @@
 
       // 3. 비율 범위 계산
       const total = sorted.length;
-      const topMax = Math.floor(total * 0.1);  // 상위 10%
-      const midMax = Math.floor(total * 0.2);  // 상위 20%
-      const lowMax = Math.floor(total * 0.3);  // 상위 30%
+      const topLimit = Math.floor(total * 0.1);  // 상위 10%
+      const midLimit = Math.floor(total * 0.2);  // 상위 20%
+      const lowLimit = Math.floor(total * 0.3);  // 상위 30%
 
       const scoreToGrade = new Map();
+      let count = 0;
       let i = 0;
 
-      // 4. top 등급 할당 (상위 0~10%)
-      let topCount = 0;
-      if (topMax > 0) {
-        while (i < groups.length && topCount + groups[i].length <= topMax) {
-          groups[i].forEach(item => scoreToGrade.set(item.row.id, 'top'));
-          topCount += groups[i].length;
+      // 4. 슬라이딩 방식 등급 할당 함수
+      const assignSliding = (limit, label) => {
+        let assigned = 0;
+        while (i < groups.length && assigned + groups[i].length <= limit) {
+          groups[i].forEach(item => scoreToGrade.set(item.row.id, label));
+          assigned += groups[i].length;
+          count += groups[i].length;
           i++;
         }
-      }
+      };
 
-      // 5. mid 등급 할당 (상위 10~20%)
-      let midCount = 0;
-      const midLimit = midMax - topCount;
-      while (i < groups.length && midCount + groups[i].length <= midLimit) {
-        groups[i].forEach(item => scoreToGrade.set(item.row.id, 'mid'));
-        midCount += groups[i].length;
-        i++;
-      }
+      // 5. 순차적 등급 할당
+      assignSliding(topLimit, 'top');
+      assignSliding(midLimit - count, 'mid');
+      assignSliding(lowLimit - count, 'low');
 
-      // 6. low 등급 할당 (상위 20~30%)
-      let lowCount = 0;
-      const lowLimit = lowMax - (topCount + midCount);
-      while (i < groups.length && lowCount + groups[i].length <= lowLimit) {
-        groups[i].forEach(item => scoreToGrade.set(item.row.id, 'low'));
-        lowCount += groups[i].length;
-        i++;
-      }
-
-      // 7. 원본 순서 유지하며 등급 반영
+      // 6. 원본 순서 유지하며 등급 반영
       return rowsWithScore.map(item => ({
         ...item,
         grade: scoreToGrade.get(item.row.id) || ''
