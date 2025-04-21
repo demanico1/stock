@@ -898,12 +898,88 @@
     let lastDBUpdate = null;
     let hotDataCache = null;
     let lastHotUpdate = null;
-    let currentFilter = 'all';  // 필터 전역 변수 추가
-    const DB_UPDATE_INTERVAL = 60000; // 1분
-    const HOT_UPDATE_INTERVAL = 60000; // 1분
+    let currentFilter = 'all';
+    const DB_UPDATE_INTERVAL = 300000; // 5분
+    const HOT_UPDATE_INTERVAL = 300000; // 5분
     let lastDataTimestamp = null;
     const UPDATE_CHECK_INTERVAL = 15000; // 15초마다 업데이트 체크
     let stockCache = null;
+
+    // 캐시 상태 관리 개선
+    let cacheState = {
+      db: {
+        data: null,
+        lastUpdate: null,
+        isUpdating: false
+      },
+      hot: {
+        data: null,
+        lastUpdate: null,
+        isUpdating: false
+      }
+    };
+
+    // 요청 제어 시스템 추가
+    class RequestController {
+      constructor() {
+        this.queue = [];
+        this.isProcessing = false;
+        this.lastRequestTime = 0;
+        this.MIN_REQUEST_INTERVAL = 2000; // 최소 2초 간격
+      }
+
+      async addToQueue(requestFn) {
+        return new Promise((resolve) => {
+          this.queue.push({ requestFn, resolve });
+          this.processQueue();
+        });
+      }
+
+      async processQueue() {
+        if (this.isProcessing || this.queue.length === 0) return;
+        
+        this.isProcessing = true;
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        
+        if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
+          await new Promise(resolve => 
+            setTimeout(resolve, this.MIN_REQUEST_INTERVAL - timeSinceLastRequest)
+          );
+        }
+
+        const { requestFn, resolve } = this.queue.shift();
+        try {
+          const result = await requestFn();
+          this.lastRequestTime = Date.now();
+          resolve(result);
+        } catch (error) {
+          console.error('요청 처리 중 오류:', error);
+          resolve(null);
+        } finally {
+          this.isProcessing = false;
+          this.processQueue();
+        }
+      }
+    }
+
+    // 에러 복구 메커니즘 추가
+    async function loadDataWithRetry(requestFn, maxRetries = 3) {
+      let lastError;
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          return await requestFn();
+        } catch (error) {
+          lastError = error;
+          if (error.message.includes('Quota exceeded')) {
+            await new Promise(resolve => 
+              setTimeout(resolve, Math.pow(2, i) * 1000)
+            );
+          }
+        }
+      }
+      throw lastError;
+    }
 
     // 점수 계산
     function calculateScore(row) {
@@ -1497,11 +1573,37 @@
 
     // 주기적 업데이트 함수 수정
     function startPeriodicUpdate() {
+      const requestController = new RequestController();
+      
       setInterval(async () => {
-        await Promise.all([
-          checkForNewData(),      // DB 영역 업데이트
-          checkHotDataUpdate()    // HOT 영역 업데이트
-        ]);
+        // DB와 HOT 데이터를 번갈아가며 체크
+        const checkDB = async () => {
+          return requestController.addToQueue(async () => {
+            if (cacheState.db.isUpdating) return;
+            cacheState.db.isUpdating = true;
+            try {
+              await loadDataWithRetry(() => checkForNewData());
+            } finally {
+              cacheState.db.isUpdating = false;
+            }
+          });
+        };
+
+        const checkHot = async () => {
+          return requestController.addToQueue(async () => {
+            if (cacheState.hot.isUpdating) return;
+            cacheState.hot.isUpdating = true;
+            try {
+              await loadDataWithRetry(() => checkHotDataUpdate());
+            } finally {
+              cacheState.hot.isUpdating = false;
+            }
+          });
+        };
+
+        // 번갈아가며 실행
+        await checkDB();
+        setTimeout(checkHot, 5000); // 5초 후 HOT 체크
       }, UPDATE_CHECK_INTERVAL);
     }
 
