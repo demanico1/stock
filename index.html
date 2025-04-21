@@ -1398,7 +1398,7 @@
       console.log('업데이트:', message);  // 콘솔에만 로그 남김
     }
 
-    // 데이터 변경 확인 함수
+    // 데이터 변경 확인 함수 수정
     async function checkForNewData() {
       try {
         const dbSheet = await findDbSheet();
@@ -1423,7 +1423,7 @@
           currentData = assignGrade([...currentData, ...newItemsWithScore]);
           renderFilteredData(currentData);
           
-          showToastNotification(`${newItems.length}개의 새로운 뉴스가 추가되었습니다`);
+          // 알림 로그 제거
           return true;
         }
         return false;
@@ -1500,8 +1500,8 @@
         // 전체 데이터를 새로 가져옴
         const newHotData = await loadHotData(true);
         
-        if (!newHotData || !Array.isArray(newHotData)) {
-          console.error('HOT 데이터 로드 실패');
+        if (!newHotData || !Array.isArray(newHotData) || newHotData.length === 0) {
+          console.log('HOT 데이터가 없습니다.');
           return false;
         }
 
