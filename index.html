@@ -891,7 +891,8 @@
   </div>
 
   <script>
-    let currentData = [];
+    let currentData = [];  // HOT 뉴스 전용
+    let dbDataList = [];   // DB 전용
     let stockMap = {};
     let dbCache = null;
     let lastDBUpdate = null;
@@ -1004,7 +1005,7 @@
       
       // 2. 전체 뉴스 수 기준으로 등급 구간 계산
       const total = sorted.length;
-      const topCount = Math.ceil(total * 0.20);    // 상위 25%
+      const topCount = Math.ceil(total * 0.20);    // 상위 20%
       const midCount = Math.ceil(total * 0.15);    // 상위 20~35%
       const lowCount = Math.ceil(total * 0.15);    // 상위 35~50%
       
@@ -1115,6 +1116,9 @@
         
         dbCache = await response.json();
         lastDBUpdate = Date.now();
+
+        // DB 데이터 리스트 갱신 (currentData는 건드리지 않음)
+        dbDataList = dbCache.map(row => ({ row }));
         
         console.log('DB 데이터 로드 완료:', dbCache?.length || 0, '건');
         return dbCache;
@@ -1461,16 +1465,16 @@
 
       try {
         // DB 데이터 로드 (또는 캐시 사용)
-        const dbData = await loadDBData();
-        if (!dbData || !dbData.length) {
+        await loadDBData();
+        if (!dbDataList.length) {
           throw new Error('검색할 데이터가 없습니다.');
         }
 
         const searchTerms = Array.isArray(keywords) ? keywords : keywords.split(" ");
-        const results = dbData
-          .filter(row => {
-            const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
-            const stockName = (row["종목명"] || "").toLowerCase();
+        const results = dbDataList
+          .filter(item => {
+            const title = (item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "").toLowerCase();
+            const stockName = (item.row["종목명"] || "").toLowerCase();
             
             return searchTerms.every(k => {
               const term = k.toLowerCase();
@@ -1479,15 +1483,15 @@
                      stockName.includes(term) ||
                      (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
             });
-          })
-          .map(row => ({ row }));
+          });
 
         if (results.length === 0) {
-          const freshData = await loadDBData(true);
-          const freshResults = freshData
-            .filter(row => {
-              const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
-              const stockName = (row["종목명"] || "").toLowerCase();
+          // 새로운 데이터로 다시 시도
+          await loadDBData(true);
+          const freshResults = dbDataList
+            .filter(item => {
+              const title = (item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "").toLowerCase();
+              const stockName = (item.row["종목명"] || "").toLowerCase();
               
               return searchTerms.every(k => {
                 const term = k.toLowerCase();
@@ -1496,8 +1500,7 @@
                        stockName.includes(term) ||
                        (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
               });
-            })
-            .map(row => ({ row }));
+            });
           
           renderNewsCards(freshResults, "search-results-list", searchTerms);
           updateSummary(freshResults);
@@ -1522,14 +1525,13 @@
       }
     }
 
-    // 전체보기 버튼 이벤트 핸들러 추가
+    // 전체보기 버튼 이벤트 핸들러 수정
     document.getElementById("show-all-button").addEventListener("click", async () => {
       try {
-        const dbData = await loadDBData();
-        if (dbData && dbData.length > 0) {
-          const mapped = dbData.map(row => ({ row })); // 점수나 등급 계산 없이 매핑
-          renderNewsCards(mapped, "search-results-list");
-          updateSummary(mapped);
+        const data = await loadDBData();
+        if (data && data.length > 0) {
+          renderNewsCards(dbDataList, "search-results-list");
+          updateSummary(dbDataList);
         }
       } catch (error) {
         console.error("전체보기 중 오류:", error);
@@ -1720,7 +1722,7 @@
           return false;
         }
 
-        // 새로운 데이터로 전체 교체
+        // HOT 데이터만 갱신
         currentData = newHotData.map((row, index) => ({
           row,
           score: calculateScore(row),
@@ -1965,70 +1967,6 @@
 
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
-      const searchInput = document.getElementById("search-input");
-      const searchButton = document.getElementById("search-button");
-
-      // 디바운스 함수
-      function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-          const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-          };
-          clearTimeout(timeout);
-          timeout = setTimeout(later, wait);
-        };
-      }
-      
-      // 종목 코드 변환 함수
-      async function convertStockCode(input) {
-        try {
-          const stockData = await loadStockData();
-          const code = input.trim();
-          
-          // 6자리 숫자인 경우에만 변환 시도
-          if (/^\d{6}$/.test(code) && stockData[code]) {
-            searchInput.value = stockData[code];
-            console.log('종목 코드 변환:', code, '->', stockData[code]);
-          }
-        } catch (error) {
-          console.error('종목 코드 변환 실패:', error);
-        }
-      }
-      
-      // 입력 이벤트에 디바운스 적용
-      const debouncedConvert = debounce(convertStockCode, 300);
-      
-      // 검색창 입력 이벤트 처리
-      searchInput.addEventListener("input", (e) => {
-        debouncedConvert(e.target.value);
-      });
-
-      // 검색 이벤트
-      searchButton.addEventListener("click", () => handleSearch());
-
-      searchInput.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleSearch();
-        }
-      });
-
-      // 맨 위로 버튼 이벤트 리스너
-      const scrollButton = document.getElementById('scrollToTop');
-      scrollButton.addEventListener('click', () => {
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      });
-
-      // 스크롤 이벤트 리스너에 쓰로틀 적용
-      window.addEventListener('scroll', throttle(() => {
-        handleScroll();
-      }, 100));
-
       try {
         // 시트 목록 먼저 로드
         await getSheets();
@@ -2057,6 +1995,9 @@
             renderFilteredData(currentData);
           }
         }
+
+        // DB 데이터는 필요할 때만 로드하도록 변경
+        // await loadDBData();  // 제거
 
         // 주기적 업데이트 시작
         startPeriodicUpdate();
