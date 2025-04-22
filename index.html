@@ -1390,12 +1390,13 @@
 
       // 네이버 뉴스 링크 업데이트
       const naverNewsLink = document.getElementById("naver-news-link");
-      const searchQuery = input.split(" ").filter(Boolean).join(" ");
+      const rawSearchQuery = input.trim();
+      const fullQuery = `${rawSearchQuery} 관련주`;
       naverNewsLink.innerHTML = `
-        🔗 <a href="https://search.naver.com/search.naver?query=${encodeURIComponent(searchQuery + " 관련주")}" 
+        🔗 <a href="https://search.naver.com/search.naver?query=${encodeURIComponent(fullQuery)}&where=news" 
              target="_blank" 
              style="color: var(--text-secondary); text-decoration: none;">
-          ${searchQuery} 관련주
+          ${fullQuery} 관련 뉴스 보기
         </a>
       `;
 
