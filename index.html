@@ -1115,12 +1115,32 @@
       }, text);
     }
 
+    // 렌더링용 중복 체크 함수 추가
+    function getUniqueNewsForRendering(newsItems) {
+      const seen = new Set();
+      return newsItems.filter(item => {
+        // 뉴스 제목과 시간으로 중복 체크
+        const title = item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "";
+        const time = item.row["시간"] || item.row["최신 뉴스 시간"] || "";
+        const key = `${title}_${time}`;
+        
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+    }
+
     // 뉴스 카드 렌더링
     function renderNewsCards(data, targetElement, keywords = []) {
+      // 렌더링 전에 중복 제거 (원본 데이터는 변경하지 않음)
+      const uniqueData = getUniqueNewsForRendering(data);
+      
       const list = document.getElementById(targetElement);
       
       // HOT 뉴스 영역일 때는 데이터가 없으면 바로 메시지 표시
-      if (targetElement === 'hot-news-list' && (!data || data.length === 0)) {
+      if (targetElement === 'hot-news-list' && (!uniqueData || uniqueData.length === 0)) {
         const loadingElement = document.getElementById('hot-news-loading');
         const skeletonElement = document.getElementById('hot-news-skeleton');
         
@@ -1139,7 +1159,7 @@
         // DB 검색 결과 렌더링
         list.innerHTML = "";
 
-        if (!data.length) {
+        if (!uniqueData.length) {
           list.innerHTML = `
             <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
               😢 표시할 뉴스가 없습니다
@@ -1148,7 +1168,7 @@
           return;
         }
 
-        data.forEach(item => {
+        uniqueData.forEach(item => {
           const card = document.createElement("div");
           card.className = "news-card";
           
@@ -1193,7 +1213,7 @@
         
         list.innerHTML = "";
 
-        if (!data.length) {
+        if (!uniqueData.length) {
           list.innerHTML = `
             <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
               😢 표시할 뉴스가 없습니다
@@ -1202,7 +1222,7 @@
           return;
         }
 
-        data.forEach(item => {
+        uniqueData.forEach(item => {
           const card = document.createElement("div");
           card.className = `news-card ${item.grade || ""}`;
           
@@ -1527,7 +1547,7 @@
       console.log('업데이트:', message);  // 콘솔에만 로그 남김
     }
 
-    // 데이터 변경 확인 함수 수정
+    // DB 데이터 업데이트 시 자동으로 전체보기/검색 결과 갱신
     async function checkForNewData() {
       try {
         const dbSheet = await findDbSheet();
@@ -1539,8 +1559,17 @@
         }
 
         // 새로운 데이터가 있는지 확인
-        const currentIds = new Set(currentData.map(item => item.row.id));
-        const newItems = newData.filter(item => !currentIds.has(item.id));
+        const currentIds = new Set(currentData.map(item => {
+          const title = item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "";
+          const time = item.row["시간"] || item.row["최신 뉴스 시간"] || "";
+          return `${title}_${time}`;
+        }));
+
+        const newItems = newData.filter(item => {
+          const title = item["뉴스 제목"] || item["대표 뉴스 제목"] || "";
+          const time = item["시간"] || item["최신 뉴스 시간"] || "";
+          return !currentIds.has(`${title}_${time}`);
+        });
         
         if (newItems.length > 0) {
           const newItemsWithScore = newItems.map(row => ({
@@ -1550,9 +1579,44 @@
           }));
 
           currentData = assignGrade([...currentData, ...newItemsWithScore]);
-          renderFilteredData(currentData);
           
-          // 알림 로그 제거
+          // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
+          const currentLayout = document.documentElement.getAttribute('data-layout');
+          if (currentLayout === 'db' || currentLayout === 'split') {
+            const searchResultsList = document.getElementById("search-results-list");
+            if (searchResultsList && searchResultsList.children.length > 0) {
+              const searchInput = document.getElementById("search-input");
+              const searchQuery = searchInput.value.trim();
+              
+              if (searchQuery) {
+                // 검색 중이면 해당 검색어로 다시 검색
+                const results = newData.filter(row => {
+                  const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
+                  const stockName = (row["종목명"] || "").toLowerCase();
+                  const term = searchQuery.toLowerCase();
+                  const stockNameFromCode = stockMap[searchQuery];
+                  return title.includes(term) || 
+                         stockName.includes(term) ||
+                         (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
+                }).map(row => ({ row }));
+                
+                if (results.length > 0) {
+                  renderNewsCards([...results], "search-results-list", [searchQuery]);
+                  updateSummary(results);
+                }
+              } else {
+                // 전체보기 상태면 전체 데이터 업데이트
+                renderNewsCards(newData.map(row => ({ row })), "search-results-list");
+                updateSummary(newData.map(row => ({ row })));
+              }
+            }
+          }
+          
+          // HOT 뉴스는 레이아웃과 관계없이 항상 업데이트
+          if (currentLayout !== 'db') {
+            renderFilteredData(currentData);
+          }
+          
           return true;
         }
         return false;
