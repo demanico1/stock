@@ -891,8 +891,7 @@
   </div>
 
   <script>
-    let currentData = [];  // HOT 뉴스 전용
-    let dbDataList = [];   // DB 전용
+    let currentData = [];
     let stockMap = {};
     let dbCache = null;
     let lastDBUpdate = null;
@@ -998,40 +997,47 @@
       return score;
     }
 
-    // 등급 분류 (전체 뉴스 수 기준 등급 할당)
+    // 등급 분류 (고유 점수 분포 기반 등급 할당)
     function assignGrade(rowsWithScore) {
       // 1. 점수 내림차순 정렬
       const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
       
-      // 2. 전체 뉴스 수 기준으로 등급 구간 계산
-      const total = sorted.length;
-      const topCount = Math.ceil(total * 0.20);    // 상위 20%
-      const midCount = Math.ceil(total * 0.15);    // 상위 20~35%
-      const lowCount = Math.ceil(total * 0.15);    // 상위 35~50%
-      
-      // 3. 등급 할당 (동점자 처리 포함)
-      let currentIndex = 0;
-      const graded = sorted.map((item, index) => {
-        let grade = '';
+      // 2. 고유 점수 분포 리스트 생성
+      const uniqueScores = [...new Set(sorted.map(item => item.score))];
+      const scoreGroups = uniqueScores.map(score => ({
+        score,
+        items: sorted.filter(item => item.score === score)
+      }));
+
+      // 3. 고유 점수 갯수에 따른 등급 컷 정의 (15/30/50% 비율)
+      const scoreCount = uniqueScores.length;
+      const topEnd = Math.floor(scoreCount * 0.25);    // 상위 25%
+      const midEnd = Math.floor(scoreCount * 0.50);    // 상위 50%
+      const lowEnd = Math.floor(scoreCount * 0.75);    // 상위 75%
+
+      // 4. 등급 할당 (누적 뉴스 수 기준)
+      const gradeMap = new Map();
+      let currentRank = 1;
+
+      for (const group of scoreGroups) {
+        const grade =
+          currentRank <= topEnd ? 'top' :
+          currentRank <= midEnd ? 'mid' :
+          currentRank <= lowEnd ? 'low' : '';
         
-        // 현재 아이템과 다음 아이템의 점수가 같은지 확인
-        const nextItem = sorted[index + 1];
-        const hasSameScore = nextItem && nextItem.score === item.score;
-        
-        // 동점자들은 같은 등급을 받도록 처리
-        if (currentIndex < topCount || (hasSameScore && grade === 'top')) {
-          grade = 'top';
-        } else if (currentIndex < topCount + midCount || (hasSameScore && grade === 'mid')) {
-          grade = 'mid';
-        } else if (currentIndex < topCount + midCount + lowCount || (hasSameScore && grade === 'low')) {
-          grade = 'low';
+        for (const item of group.items) {
+          gradeMap.set(item, grade);
         }
-        
-        currentIndex++;
-        return { ...item, grade };
-      });
-      
-      return graded;
+
+        // 실제 등수는 뉴스 수만큼 누적
+        currentRank += group.items.length;
+      }
+
+      // 5. 원본 순서 유지하며 등급 반영
+      return sorted.map(item => ({
+        ...item,
+        grade: gradeMap.get(item) || ''
+      }));
     }
 
     // 시트 목록을 가져오는 함수 추가
@@ -1116,9 +1122,6 @@
         
         dbCache = await response.json();
         lastDBUpdate = Date.now();
-
-        // DB 데이터 리스트 갱신 (currentData는 건드리지 않음)
-        dbDataList = dbCache.map(row => ({ row }));
         
         console.log('DB 데이터 로드 완료:', dbCache?.length || 0, '건');
         return dbCache;
@@ -1465,17 +1468,18 @@
 
       try {
         // DB 데이터 로드 (또는 캐시 사용)
-        await loadDBData();
-        if (!dbDataList.length) {
+        const data = await loadDBData();
+        if (!data || !data.length) {
           throw new Error('검색할 데이터가 없습니다.');
         }
 
         const searchTerms = Array.isArray(keywords) ? keywords : keywords.split(" ");
-        const results = dbDataList
-          .filter(item => {
-            const title = (item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "").toLowerCase();
-            const stockName = (item.row["종목명"] || "").toLowerCase();
+        const results = data
+          .filter(row => {
+            const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
+            const stockName = (row["종목명"] || "").toLowerCase();
             
+            // 모든 검색어가 제목이나 종목명에 포함되어야 함 (AND 조건)
             return searchTerms.every(k => {
               const term = k.toLowerCase();
               const stockNameFromCode = stockMap[k];
@@ -1483,15 +1487,15 @@
                      stockName.includes(term) ||
                      (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
             });
-          });
+          })
+          .map(row => ({ row }));
 
         if (results.length === 0) {
-          // 새로운 데이터로 다시 시도
-          await loadDBData(true);
-          const freshResults = dbDataList
-            .filter(item => {
-              const title = (item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "").toLowerCase();
-              const stockName = (item.row["종목명"] || "").toLowerCase();
+          const freshData = await loadDBData(true);
+          const freshResults = freshData
+            .filter(row => {
+              const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
+              const stockName = (row["종목명"] || "").toLowerCase();
               
               return searchTerms.every(k => {
                 const term = k.toLowerCase();
@@ -1500,7 +1504,8 @@
                        stockName.includes(term) ||
                        (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
               });
-            });
+            })
+            .map(row => ({ row }));
           
           renderNewsCards(freshResults, "search-results-list", searchTerms);
           updateSummary(freshResults);
@@ -1525,13 +1530,13 @@
       }
     }
 
-    // 전체보기 버튼 이벤트 핸들러 수정
+    // 전체보기 버튼 이벤트 핸들러 추가
     document.getElementById("show-all-button").addEventListener("click", async () => {
       try {
         const data = await loadDBData();
         if (data && data.length > 0) {
-          renderNewsCards(dbDataList, "search-results-list");
-          updateSummary(dbDataList);
+          renderNewsCards(data.map(row => ({ row })), "search-results-list");
+          updateSummary(data.map(row => ({ row })));
         }
       } catch (error) {
         console.error("전체보기 중 오류:", error);
@@ -1722,7 +1727,7 @@
           return false;
         }
 
-        // HOT 데이터만 갱신
+        // 새로운 데이터로 전체 교체
         currentData = newHotData.map((row, index) => ({
           row,
           score: calculateScore(row),
@@ -1967,6 +1972,70 @@
 
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
+      const searchInput = document.getElementById("search-input");
+      const searchButton = document.getElementById("search-button");
+
+      // 디바운스 함수
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
+      
+      // 종목 코드 변환 함수
+      async function convertStockCode(input) {
+        try {
+          const stockData = await loadStockData();
+          const code = input.trim();
+          
+          // 6자리 숫자인 경우에만 변환 시도
+          if (/^\d{6}$/.test(code) && stockData[code]) {
+            searchInput.value = stockData[code];
+            console.log('종목 코드 변환:', code, '->', stockData[code]);
+          }
+        } catch (error) {
+          console.error('종목 코드 변환 실패:', error);
+        }
+      }
+      
+      // 입력 이벤트에 디바운스 적용
+      const debouncedConvert = debounce(convertStockCode, 300);
+      
+      // 검색창 입력 이벤트 처리
+      searchInput.addEventListener("input", (e) => {
+        debouncedConvert(e.target.value);
+      });
+
+      // 검색 이벤트
+      searchButton.addEventListener("click", () => handleSearch());
+
+      searchInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          handleSearch();
+        }
+      });
+
+      // 맨 위로 버튼 이벤트 리스너
+      const scrollButton = document.getElementById('scrollToTop');
+      scrollButton.addEventListener('click', () => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+
+      // 스크롤 이벤트 리스너에 쓰로틀 적용
+      window.addEventListener('scroll', throttle(() => {
+        handleScroll();
+      }, 100));
+
       try {
         // 시트 목록 먼저 로드
         await getSheets();
@@ -1974,10 +2043,13 @@
         // 종목 정보 로드
         await loadStockData();
 
-        // HOT 데이터 로드 및 초기화
+        // DB 데이터 미리 로드
+        await loadDBData();
+
+        // HOT 데이터 미리 로드
         const hotData = await loadHotData();
         
-        if (hotData && hotData.length > 0) {
+        if (hotData) {
           currentData = hotData.map((row, index) => ({
             row,
             score: calculateScore(row),
@@ -1992,12 +2064,9 @@
           // URL에 필터나 검색어가 없는 경우 기본 렌더링
           if (!new URLSearchParams(window.location.search).has('filter') && 
               !new URLSearchParams(window.location.search).has('search')) {
-            renderFilteredData(currentData);
+            renderNewsCards(currentData, "hot-news-list");
           }
         }
-
-        // DB 데이터는 필요할 때만 로드하도록 변경
-        // await loadDBData();  // 제거
 
         // 주기적 업데이트 시작
         startPeriodicUpdate();
