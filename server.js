@@ -8,6 +8,9 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// ✅ 정적 파일 제공 (favicon.png 포함)
+app.use(express.static(path.join(__dirname)));  // 여기가 핵심!
+
 // 루트: index.html 제공
 app.get("/", (req, res) => {
   const filePath = path.join(__dirname, "index.html");
@@ -21,7 +24,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// 시트 목록 조회 (/sheets)
+// 시트 목록 조회
 app.get("/sheets", async (req, res) => {
   try {
     const auth = new google.auth.GoogleAuth({
@@ -45,7 +48,7 @@ app.get("/sheets", async (req, res) => {
   }
 });
 
-// 특정 시트 내용 조회 (/sheet/:gid)
+// 특정 시트 조회
 app.get("/sheet/:gid", async (req, res) => {
   try {
     const gid = req.params.gid;
