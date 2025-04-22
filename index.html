@@ -997,47 +997,40 @@
       return score;
     }
 
-    // 등급 분류 (고유 점수 분포 기반 등급 할당)
+    // 등급 분류 (전체 뉴스 수 기준 등급 할당)
     function assignGrade(rowsWithScore) {
       // 1. 점수 내림차순 정렬
       const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
       
-      // 2. 고유 점수 분포 리스트 생성
-      const uniqueScores = [...new Set(sorted.map(item => item.score))];
-      const scoreGroups = uniqueScores.map(score => ({
-        score,
-        items: sorted.filter(item => item.score === score)
-      }));
-
-      // 3. 고유 점수 갯수에 따른 등급 컷 정의 (15/30/50% 비율)
-      const scoreCount = uniqueScores.length;
-      const topEnd = Math.floor(scoreCount * 0.25);    // 상위 25%
-      const midEnd = Math.floor(scoreCount * 0.50);    // 상위 50%
-      const lowEnd = Math.floor(scoreCount * 0.75);    // 상위 75%
-
-      // 4. 등급 할당 (누적 뉴스 수 기준)
-      const gradeMap = new Map();
-      let currentRank = 1;
-
-      for (const group of scoreGroups) {
-        const grade =
-          currentRank <= topEnd ? 'top' :
-          currentRank <= midEnd ? 'mid' :
-          currentRank <= lowEnd ? 'low' : '';
+      // 2. 전체 뉴스 수 기준으로 등급 구간 계산
+      const total = sorted.length;
+      const topCount = Math.ceil(total * 0.25);    // 상위 25%
+      const midCount = Math.ceil(total * 0.25);    // 상위 25~50%
+      const lowCount = Math.ceil(total * 0.25);    // 상위 50~75%
+      
+      // 3. 등급 할당 (동점자 처리 포함)
+      let currentIndex = 0;
+      const graded = sorted.map((item, index) => {
+        let grade = '';
         
-        for (const item of group.items) {
-          gradeMap.set(item, grade);
+        // 현재 아이템과 다음 아이템의 점수가 같은지 확인
+        const nextItem = sorted[index + 1];
+        const hasSameScore = nextItem && nextItem.score === item.score;
+        
+        // 동점자들은 같은 등급을 받도록 처리
+        if (currentIndex < topCount || (hasSameScore && grade === 'top')) {
+          grade = 'top';
+        } else if (currentIndex < topCount + midCount || (hasSameScore && grade === 'mid')) {
+          grade = 'mid';
+        } else if (currentIndex < topCount + midCount + lowCount || (hasSameScore && grade === 'low')) {
+          grade = 'low';
         }
-
-        // 실제 등수는 뉴스 수만큼 누적
-        currentRank += group.items.length;
-      }
-
-      // 5. 원본 순서 유지하며 등급 반영
-      return sorted.map(item => ({
-        ...item,
-        grade: gradeMap.get(item) || ''
-      }));
+        
+        currentIndex++;
+        return { ...item, grade };
+      });
+      
+      return graded;
     }
 
     // 시트 목록을 가져오는 함수 추가
