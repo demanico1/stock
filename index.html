@@ -294,13 +294,18 @@
     }
 
     .news-card {
-      background: var(--bg-color);
+      background: var(--card-bg);
       padding: 16px;
       border-radius: 8px;
       box-shadow: var(--card-shadow);
-      transition: all 0.2s;
+      transition: background-color 0.2s ease-in;
       word-break: break-word;
       border: 1px solid var(--border-color);
+    }
+
+    /* 등급이 없는 카드는 기본 배경색 유지 */
+    .news-card:not(.top):not(.mid):not(.low) {
+      background: var(--card-bg);
     }
 
     .news-card.top { 
@@ -1004,9 +1009,9 @@
       
       // 2. 전체 뉴스 수 기준으로 등급 구간 계산
       const total = sorted.length;
-      const topCount = Math.ceil(total * 0.25);    // 상위 25%
-      const midCount = Math.ceil(total * 0.25);    // 상위 25~50%
-      const lowCount = Math.ceil(total * 0.25);    // 상위 50~75%
+      const topCount = Math.ceil(total * 0.20);    // 상위 20%
+      const midCount = Math.ceil(total * 0.20);    // 상위 20~40%
+      const lowCount = Math.ceil(total * 0.20);    // 상위 40~60%
       
       // 3. 등급 할당 (동점자 처리 포함)
       let currentIndex = 0;
