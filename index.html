@@ -1244,6 +1244,12 @@
     function setFilter(filter) {
       currentFilter = filter;
       
+      // 현재 레이아웃이 'db'인 경우 'hot' 레이아웃으로 자동 전환
+      const currentLayout = document.documentElement.getAttribute('data-layout');
+      if (currentLayout === 'db') {
+        setLayout('hot');
+      }
+      
       // URL 쿼리 파라미터 업데이트
       const url = new URL(window.location);
       url.searchParams.set('filter', filter);
