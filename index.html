@@ -708,20 +708,32 @@
       position: fixed;
       bottom: 20px;
       right: 20px;
-      width: 40px;
-      height: 40px;
+      width: 60px;
+      height: 60px;
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 50%;
       display: none;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      opacity: 0.8;
+      opacity: 0.9;
       transition: all 0.3s;
       z-index: 1000;
       box-shadow: var(--card-shadow);
+      gap: 2px;
+      color: var(--text-color);
+    }
+
+    .scroll-to-top .arrow {
       font-size: 20px;
+      line-height: 1;
+    }
+
+    .scroll-to-top .text {
+      font-size: 12px;
+      line-height: 1;
     }
 
     .scroll-to-top:hover {
@@ -731,8 +743,8 @@
 
     @media (max-width: 768px) {
       .scroll-to-top {
-        width: 36px;
-        height: 36px;
+        width: 50px;
+        height: 50px;
         bottom: 16px;
         right: 16px;
       }
@@ -746,7 +758,10 @@
 </head>
 <body>
   <!-- 맨 위로 버튼 추가 -->
-  <button class="scroll-to-top" id="scrollToTop" title="맨 위로">↑</button>
+  <button class="scroll-to-top" id="scrollToTop" title="맨 위로">
+    <span class="arrow">▲</span>
+    <span class="text">맨위로</span>
+  </button>
 
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
@@ -1227,32 +1242,29 @@
 
     // 필터 설정 함수 수정
     function setFilter(filter) {
-        currentFilter = filter;
-        
-        // URL 쿼리 파라미터 업데이트
-        const url = new URL(window.location);
-        url.searchParams.set('filter', filter);
-        window.history.pushState({}, '', url);
-        
-        // 버튼 활성화 상태 업데이트
-        document.querySelectorAll('.filter-button').forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.classList.contains(filter)) {
-                btn.classList.add('active');
-            }
-        });
-        
-        // 필터 버튼이 고정된 상태라면 최상단으로 스크롤
-        const filterButtons = document.querySelector('.filter-buttons');
-        if (filterButtons.classList.contains('fixed')) {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+      currentFilter = filter;
+      
+      // URL 쿼리 파라미터 업데이트
+      const url = new URL(window.location);
+      url.searchParams.set('filter', filter);
+      window.history.pushState({}, '', url);
+      
+      // 버튼 활성화 상태 업데이트
+      document.querySelectorAll('.filter-button').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.classList.contains(filter)) {
+          btn.classList.add('active');
         }
-        
-        // 필터링된 데이터 렌더링
-        renderFilteredData(currentData);
+      });
+      
+      // 무조건 최상단으로 스크롤
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+      
+      // 필터링된 데이터 렌더링
+      renderFilteredData(currentData);
     }
 
     // URL에서 초기 필터 상태 확인하는 함수 추가
@@ -1728,7 +1740,7 @@
         }
       });
 
-      // 화면 최상단으로 부드럽게 스크롤
+      // 무조건 최상단으로 스크롤
       window.scrollTo({
         top: 0,
         behavior: 'smooth'
