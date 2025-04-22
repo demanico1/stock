@@ -822,6 +822,8 @@
           <input type="text" placeholder="검색어를 입력하세요" id="search-input">
           <button id="search-button">검색</button>
         </div>
+        <div id="naver-news-link" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px 0;"></div>
+        <button id="show-all-button" style="font-size: 12px; margin-top: 8px;">전체보기</button>
       </div>
 
       <div id="searching-text" class="spinner-blink" style="display:none;">
@@ -1386,6 +1388,17 @@
       searchButton.textContent = "검색 중...";
       searchingText.style.display = "block";
 
+      // 네이버 뉴스 링크 업데이트
+      const naverNewsLink = document.getElementById("naver-news-link");
+      const searchQuery = input.split(" ").filter(Boolean).join(" ");
+      naverNewsLink.innerHTML = `
+        🔗 <a href="https://search.naver.com/search.naver?query=${encodeURIComponent(searchQuery + " 관련주")}" 
+             target="_blank" 
+             style="color: var(--text-secondary); text-decoration: none;">
+          ${searchQuery} 관련주
+        </a>
+      `;
+
       try {
         // DB 데이터 로드 (또는 캐시 사용)
         const data = await loadDBData();
@@ -1449,6 +1462,19 @@
         searchingText.style.display = "none";
       }
     }
+
+    // 전체보기 버튼 이벤트 핸들러 추가
+    document.getElementById("show-all-button").addEventListener("click", async () => {
+      try {
+        const data = await loadDBData();
+        if (data && data.length > 0) {
+          renderNewsCards(data.map(row => ({ row })), "search-results-list");
+          updateSummary(data.map(row => ({ row })));
+        }
+      } catch (error) {
+        console.error("전체보기 중 오류:", error);
+      }
+    });
 
     // URL에서 초기 상태를 확인하는 함수 수정
     function initializeFromURL() {
