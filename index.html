@@ -966,9 +966,9 @@
 
       // 3. 고유 점수 갯수에 따른 등급 컷 정의 (15/30/50% 비율)
       const scoreCount = uniqueScores.length;
-      const topEnd = Math.floor(scoreCount * 0.15);    // 상위 15%
-      const midEnd = Math.floor(scoreCount * 0.30);    // 상위 30%
-      const lowEnd = Math.floor(scoreCount * 0.50);    // 상위 50%
+      const topEnd = Math.floor(scoreCount * 0.25);    // 상위 25%
+      const midEnd = Math.floor(scoreCount * 0.50);    // 상위 50%
+      const lowEnd = Math.floor(scoreCount * 0.75);    // 상위 75%
 
       // 4. 등급 할당 (누적 뉴스 수 기준)
       const gradeMap = new Map();
