@@ -294,18 +294,13 @@
     }
 
     .news-card {
-      background: var(--card-bg);
+      background: var(--bg-color);
       padding: 16px;
       border-radius: 8px;
       box-shadow: var(--card-shadow);
-      transition: background-color 0.2s ease-in;
+      transition: all 0.2s;
       word-break: break-word;
       border: 1px solid var(--border-color);
-    }
-
-    /* 등급이 없는 카드는 기본 배경색 유지 */
-    .news-card:not(.top):not(.mid):not(.low) {
-      background: var(--card-bg);
     }
 
     .news-card.top { 
@@ -1010,8 +1005,8 @@
       // 2. 전체 뉴스 수 기준으로 등급 구간 계산
       const total = sorted.length;
       const topCount = Math.ceil(total * 0.20);    // 상위 20%
-      const midCount = Math.ceil(total * 0.20);    // 상위 20~40%
-      const lowCount = Math.ceil(total * 0.20);    // 상위 40~60%
+      const midCount = Math.ceil(total * 0.15);    // 상위 20~35%
+      const lowCount = Math.ceil(total * 0.15);    // 상위 35~50%
       
       // 3. 등급 할당 (동점자 처리 포함)
       let currentIndex = 0;
@@ -1248,7 +1243,16 @@
 
         uniqueData.forEach(item => {
           const card = document.createElement("div");
-          card.className = `news-card ${item.grade || ""}`;
+          card.className = "news-card";
+          
+          // 등급이 있는 경우에만 해당 클래스 추가
+          if (item.grade === 'top') {
+            card.classList.add('top');
+          } else if (item.grade === 'mid') {
+            card.classList.add('mid');
+          } else if (item.grade === 'low') {
+            card.classList.add('low');
+          }
           
           const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
           const latestTime = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
