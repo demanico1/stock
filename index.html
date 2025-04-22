@@ -186,20 +186,33 @@
       gap: 8px;
     }
 
-    .search-form input {
+    .search-input-wrapper {
+      position: relative;
       flex: 1;
-      min-width: 0;
-      max-width: 100%;
-      padding: 8px 12px;
-      border-radius: 4px;
-      border: 1px solid var(--border-color);
-      background: var(--bg-color);
-      color: var(--text-color);
-      font-size: 13px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .clear-search {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-secondary);
+      display: none;
+    }
+    
+    .clear-search:hover {
+      opacity: 0.7;
     }
 
-    .search-form input::placeholder {
-      color: var(--text-secondary);
+    #search-input {
+      padding-right: 30px;
     }
 
     .search-form button {
@@ -836,7 +849,10 @@
       <div class="search-area">
         <h3>🔍 DB 검색</h3>
         <div class="search-form">
-          <input type="text" placeholder="검색어를 입력하세요" id="search-input">
+          <div class="search-input-wrapper">
+            <input type="text" placeholder="검색어를 입력하세요" id="search-input">
+            <button id="clear-search" class="clear-search" style="display: none;">❌</button>
+          </div>
           <button id="search-button">검색</button>
         </div>
         <div id="naver-news-link" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px 0;"></div>
@@ -1900,6 +1916,49 @@
         throw error;
       }
     }
+
+    // 검색어 초기화 함수
+    function clearSearch() {
+      const searchInput = document.getElementById("search-input");
+      const clearButton = document.getElementById("clear-search");
+      searchInput.value = "";
+      clearButton.style.display = "none";
+      
+      // 전체보기 상태로 전환
+      loadDBData().then(data => {
+        if (data && data.length > 0) {
+          renderNewsCards(data.map(row => ({ row })), "search-results-list");
+          updateSummary(data.map(row => ({ row })));
+        }
+      });
+    }
+
+    // 검색창 이벤트 핸들러 설정
+    document.addEventListener("DOMContentLoaded", () => {
+      const searchInput = document.getElementById("search-input");
+      const clearButton = document.getElementById("clear-search");
+      const showAllButton = document.getElementById("show-all-button");
+
+      // 입력값 변경 감지
+      searchInput.addEventListener("input", (e) => {
+        const hasValue = e.target.value.trim().length > 0;
+        clearButton.style.display = hasValue ? "block" : "none";
+        
+        // 값이 비어있으면 전체보기 상태로
+        if (!hasValue) {
+          clearSearch();
+        }
+      });
+
+      // X 버튼 클릭
+      clearButton.addEventListener("click", clearSearch);
+
+      // 전체보기 버튼 클릭 시 검색창 초기화
+      showAllButton.addEventListener("click", () => {
+        searchInput.value = "";
+        clearButton.style.display = "none";
+      });
+    });
 
     // 초기화
     document.addEventListener("DOMContentLoaded", async () => {
