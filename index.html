@@ -1843,7 +1843,20 @@
     function startPeriodicUpdate() {
       const requestController = new RequestController();
       
+      // 오늘 날짜가 선택되었는지 확인하는 함수
+      function isTodaySelected() {
+        const todayStr = formatDate(new Date());
+        const selected = document.getElementById('date-selector').value;
+        return selected === todayStr;
+      }
+      
       setInterval(async () => {
+        // 오늘 날짜가 선택되지 않은 경우 업데이트 건너뛰기
+        if (!isTodaySelected()) {
+          console.log('과거 날짜 선택 중 - 실시간 업데이트 중지');
+          return;
+        }
+        
         // DB와 HOT 데이터를 번갈아가며 체크
         const checkDB = async () => {
           return requestController.addToQueue(async () => {
@@ -1875,9 +1888,9 @@
           });
         };
 
-        // 번갈아가며 실행 (시간 간격 늘림)
+        // 번갈아가며 실행
         await checkDB();
-        setTimeout(checkHot, 7000); // 7초 후 HOT 체크 (간격 늘림)
+        setTimeout(checkHot, 7000);
       }, UPDATE_CHECK_INTERVAL);
     }
 
@@ -2028,6 +2041,14 @@
         
         sheets.forEach(sheet => {
           try {
+            // HOT 또는 DB 시트인 경우에만 날짜 추출 시도
+            const isHotSheet = sheet.name.toLowerCase().includes('hot');
+            const isDbSheet = sheet.name.toLowerCase().includes('db');
+            
+            if (!isHotSheet && !isDbSheet) {
+              return; // HOT/DB가 아닌 시트는 건너뜀
+            }
+            
             // 개선된 정규식: 한글/영문 요일 모두 지원
             const match = sheet.name.match(/(\d{2}\.\d{2}\([가-힣a-zA-Z]+\))/);
             
@@ -2037,15 +2058,12 @@
             }
             
             const date = match[1];
-            const sheetType = sheet.name.toLowerCase().includes('hot') ? 'hot' : 
-                            sheet.name.toLowerCase().includes('db') ? 'db' : null;
+            const sheetType = isHotSheet ? 'hot' : 'db';
             
-            if (sheetType) {
-              if (!dateMap.has(date)) {
-                dateMap.set(date, new Set());
-              }
-              dateMap.get(date).add(sheetType);
+            if (!dateMap.has(date)) {
+              dateMap.set(date, new Set());
             }
+            dateMap.get(date).add(sheetType);
           } catch (e) {
             console.warn("시트 처리 중 오류:", sheet.name, e);
           }
@@ -2069,13 +2087,21 @@
         // 날짜가 없으면 기본 옵션만 표시하고 비활성화
         if (sortedDates.length === 0) {
           const option = document.createElement('option');
-          option.value = '';
-          option.textContent = '날짜 선택 불가';
+          option.value = todayStr;  // 오늘 날짜를 값으로 설정
+          option.textContent = todayStr;  // 오늘 날짜를 텍스트로 표시
+          option.selected = true;  // 선택 상태로 설정
           dateSelector.appendChild(option);
           dateSelector.disabled = true;
           dateSelector.style.opacity = '0.5';
           console.log('날짜 선택 불가 → 기본 오늘 날짜로 작동');
-          return null;
+          
+          // 캐시 초기화
+          dbCache = null;
+          hotDataCache = null;
+          currentDbData = [];
+          currentHotData = [];
+          
+          return todayStr;  // 오늘 날짜 반환
         }
         
         sortedDates.forEach(date => {
@@ -2094,15 +2120,39 @@
       } catch (error) {
         console.error('날짜 선택기 업데이트 실패:', error);
         const dateSelector = document.getElementById('date-selector');
+        const today = new Date();
+        const todayStr = formatDate(today);
+        
+        // 에러 발생 시에도 오늘 날짜 옵션 추가
+        dateSelector.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = todayStr;
+        option.textContent = todayStr;
+        option.selected = true;
+        dateSelector.appendChild(option);
+        
         dateSelector.disabled = true;
         dateSelector.style.opacity = '0.5';
         console.log('날짜 선택 불가 → 기본 오늘 날짜로 작동');
-        return null;
+        
+        // 캐시 초기화
+        dbCache = null;
+        hotDataCache = null;
+        currentDbData = [];
+        currentHotData = [];
+        
+        return todayStr;  // 오늘 날짜 반환
       }
     }
 
     async function loadDataByDate(dateStr) {
       try {
+        // 캐시 초기화
+        dbCache = null;
+        hotDataCache = null;
+        currentDbData = [];
+        currentHotData = [];
+        
         const sheets = await getSheets();
         
         // HOT 시트 로드
@@ -2150,6 +2200,11 @@
         }
       } catch (error) {
         console.error('날짜별 데이터 로드 실패:', error);
+        // 에러 발생 시에도 캐시 초기화
+        dbCache = null;
+        hotDataCache = null;
+        currentDbData = [];
+        currentHotData = [];
       }
     }
 
