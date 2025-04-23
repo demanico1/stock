@@ -899,6 +899,8 @@
     let hotDataCache = null;
     let lastHotUpdate = null;
     let currentFilter = 'all';
+    let isViewingAll = true;
+    let currentSearchKeyword = "";
     const DB_UPDATE_INTERVAL = 300000; // 5분
     const HOT_UPDATE_INTERVAL = 300000; // 5분
     let lastDataTimestamp = null;
@@ -1520,6 +1522,8 @@
       searchInput.value = "";
       clearButton.style.display = "none";
       
+      isViewingAll = true;
+      
       // 전체보기 상태로 전환
       loadDBData().then(data => {
         if (data && data.length > 0) {
@@ -1554,6 +1558,7 @@
       searchButton.disabled = true;
       searchButton.textContent = "검색 중...";
       searchingText.style.display = "block";
+      isViewingAll = false;
 
       // 네이버 뉴스 링크 업데이트
       const naverNewsLink = document.getElementById("naver-news-link");
@@ -1711,16 +1716,13 @@
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
           if (currentLayout === 'db' || currentLayout === 'split') {
-            const searchInput = document.getElementById("search-input");
-            const searchQuery = searchInput.value.trim();
-            
-            if (searchQuery) {
-              // 검색 중이면 해당 검색어로 다시 검색
-              handleSearch();
-            } else {
+            if (isViewingAll) {
               // 전체보기 상태면 전체 데이터 업데이트
               renderNewsCards(currentDbData, "search-results-list");
               updateSummary(currentDbData);
+            } else {
+              // 검색 중이면 해당 검색어로 다시 검색
+              handleSearch();
             }
           }
           
