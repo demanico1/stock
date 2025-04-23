@@ -1737,7 +1737,11 @@
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
           if (currentLayout === 'db' || currentLayout === 'split') {
-            // 전체보기 상태면 항상 전체 데이터 업데이트
+            // 전체보기 상태면 originalIndex 기준으로 정렬
+            if (isViewingAll) {
+              currentDbData.sort((a, b) => a.originalIndex - b.originalIndex);
+            }
+            
             renderNewsCards(currentDbData, "search-results-list");
             updateSummary(currentDbData);
 
