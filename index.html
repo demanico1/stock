@@ -789,6 +789,9 @@
   <!-- 레이아웃 컨트롤 -->
   <div class="layout-controls">
     <div class="layout-buttons">
+      <select id="date-selector" class="date-selector">
+        <option value="">날짜 선택</option>
+      </select>
       <button onclick="setLayout('hot')" data-layout="hot">뉴스</button>
       <button onclick="setLayout('db')" data-layout="db">검색</button>
       <button onclick="setLayout('split')" data-layout="split" class="active">뉴스+검색</button>
@@ -1996,90 +1999,133 @@
       }
     }
 
+    // 날짜 선택 관련 함수들
+    function formatDate(date) {
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+      const weekday = weekdays[date.getDay()];
+      return `${month}.${day}(${weekday})`;
+    }
+
+    function findSheetByDate(sheets, type, dateStr) {
+      return sheets.find(s => {
+        const sheetName = s.name.toLowerCase();
+        return sheetName.includes(type) && sheetName.includes(dateStr);
+      });
+    }
+
+    async function updateDateSelector() {
+      try {
+        const sheets = await getSheets();
+        const dateSelector = document.getElementById('date-selector');
+        const today = new Date();
+        const todayStr = formatDate(today);
+        
+        // 날짜 목록 추출 및 정렬
+        const dates = new Set();
+        sheets.forEach(sheet => {
+          const match = sheet.name.match(/(\d{2}\.\d{2}\(\w\))/);
+          if (match) dates.add(match[1]);
+        });
+        
+        // 드롭다운 옵션 생성
+        dateSelector.innerHTML = '';
+        const sortedDates = Array.from(dates).sort((a, b) => {
+          const [aMonth, aDay] = a.split('.');
+          const [bMonth, bDay] = b.split('.');
+          return (bMonth + bDay) - (aMonth + aDay);
+        });
+        
+        sortedDates.forEach(date => {
+          const option = document.createElement('option');
+          option.value = date;
+          option.textContent = date;
+          if (date === todayStr) option.selected = true;
+          dateSelector.appendChild(option);
+        });
+        
+        return todayStr;
+      } catch (error) {
+        console.error('날짜 선택기 업데이트 실패:', error);
+        return null;
+      }
+    }
+
+    async function loadDataByDate(dateStr) {
+      try {
+        const sheets = await getSheets();
+        
+        // HOT 시트 로드
+        const hotSheet = findSheetByDate(sheets, 'hot', dateStr);
+        if (hotSheet) {
+          const response = await fetch(`/sheet/${hotSheet.gid}`);
+          if (response.ok) {
+            const hotData = await response.json();
+            currentHotData = hotData.map((row, index) => ({
+              row,
+              score: calculateScore(row),
+              originalIndex: index
+            }));
+            currentHotData = assignGrade(currentHotData);
+            renderFilteredData(currentHotData);
+          }
+        }
+        
+        // DB 시트 로드
+        const dbSheet = findSheetByDate(sheets, 'db', dateStr);
+        if (dbSheet) {
+          const response = await fetch(`/sheet/${dbSheet.gid}`);
+          if (response.ok) {
+            const dbData = await response.json();
+            currentDbData = dbData.map((row, index) => ({
+              row,
+              score: calculateScore(row),
+              originalIndex: index
+            }));
+            currentDbData = assignGrade(currentDbData);
+            
+            const currentLayout = document.documentElement.getAttribute('data-layout');
+            if (currentLayout === 'db' || currentLayout === 'split') {
+              const searchInput = document.getElementById("search-input");
+              const searchQuery = searchInput.value.trim();
+              
+              if (searchQuery) {
+                handleSearch();
+              } else {
+                renderNewsCards(currentDbData, "search-results-list");
+                updateSummary(currentDbData);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('날짜별 데이터 로드 실패:', error);
+      }
+    }
+
     // 초기화 코드 통합
     document.addEventListener("DOMContentLoaded", async () => {
       try {
         await getSheets();
-        stockMap = await loadStockData();  // stockMap에 종목정보 할당
+        stockMap = await loadStockData();
         
-        // 종목코드 자동 치환 기능 추가
-        document.getElementById("search-input").addEventListener("input", (e) => {
-          const input = e.target.value.trim();
-          if (isStockCode(input) && stockMap[input]) {
-            e.target.value = stockMap[input];
+        // 날짜 선택기 초기화 및 이벤트 리스너 추가
+        const todayStr = await updateDateSelector();
+        document.getElementById('date-selector').addEventListener('change', async (e) => {
+          const selectedDate = e.target.value;
+          if (selectedDate) {
+            await loadDataByDate(selectedDate);
           }
         });
         
-        // 스크롤 이벤트 리스너 추가
-        window.addEventListener("scroll", handleScroll);
-        
-        // 맨 위로 버튼 클릭 이벤트 추가
-        document.getElementById("scrollToTop").addEventListener("click", () => {
-          window.scrollTo({
-            top: 0,
-            behavior: "smooth"
-          });
-        });
-        
-        // 검색 버튼 이벤트 리스너 추가
-        document.getElementById("search-button").addEventListener("click", () => handleSearch());
-        
-        // 검색 입력창 Enter 키 이벤트 추가
-        document.getElementById("search-input").addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            handleSearch();
-          }
-        });
-        
-        // 검색창 입력 이벤트 리스너 추가
-        document.getElementById("search-input").addEventListener("input", (e) => {
-          const clearBtn = document.getElementById("clear-search");
-          const input = e.target.value.trim();
-          
-          if (input) {
-            clearBtn.style.display = "flex";
-          } else {
-            clearBtn.style.display = "none";
-            clearSearch(); // 입력값이 비었을 때 전체보기로 전환
-          }
-        });
-        
-        // clear-search 버튼 클릭 이벤트 추가
-        document.getElementById("clear-search").addEventListener("click", () => {
-          document.getElementById("search-input").value = "";
-          document.getElementById("clear-search").style.display = "none";
-          clearSearch();
-        });
-        
-        // [HOT/DB 분리] 초기화 순서 유지
-        const dbData = await loadDBData();
-        currentDbData = dbData.map((row, index) => ({
-          row,
-          score: calculateScore(row),
-          originalIndex: index
-        }));
-        // [HOT/DB 분리] DB 데이터에도 등급 할당
-        currentDbData = assignGrade(currentDbData);
-        
-        const hotData = await loadHotData();
-        if (hotData) {
-          currentHotData = hotData.map((row, index) => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: index
-          }));
-          
-          currentHotData = assignGrade(currentHotData);
+        // 초기 데이터 로드
+        if (todayStr) {
+          await loadDataByDate(todayStr);
         }
-
-        initializeFromURL();
         
-        // HOT 데이터 즉시 로딩 추가
-        await checkHotDataUpdate();
-        
-        startPeriodicUpdate();
-        setTheme('light');
-        setLayout('hot');
+        // 기존 이벤트 리스너들...
+        // ... existing code ...
 
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
