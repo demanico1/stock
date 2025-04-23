@@ -301,6 +301,26 @@
       transition: all 0.2s;
       word-break: break-word;
       border: 1px solid var(--border-color);
+      position: relative; /* NEW 배지 포지셔닝을 위해 추가 */
+    }
+
+    .new-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #ff4757;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: bold;
+      z-index: 10;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
     }
 
     .news-card.top { 
@@ -1228,6 +1248,21 @@
           const card = document.createElement("div");
           card.className = "news-card";
           
+          // NEW 배지 추가 (새로운 뉴스인 경우에만)
+          if (item.isNew) {
+            const badge = document.createElement('span');
+            badge.className = 'new-badge';
+            badge.textContent = 'NEW';
+            card.appendChild(badge);
+            
+            // 1분 후 배지 제거
+            setTimeout(() => {
+              if (badge.parentNode === card) {
+                badge.remove();
+              }
+            }, 60000);
+          }
+          
           const title = item.row["뉴스 제목"] || "";
           const time = item.row["시간"] || "";
           const channelName = item.row["채널명"] || "";
@@ -1730,7 +1765,8 @@
           currentDbData = newData.map((row, index) => ({
             row,
             score: calculateScore(row),
-            originalIndex: index
+            originalIndex: index,
+            isNew: currentIds.has(`${row["뉴스 제목"] || row["대표 뉴스 제목"] || ""}_${row["시간"] || row["최신 뉴스 시간"] || ""}`) ? false : true
           }));
 
           currentDbData = assignGrade(currentDbData);
