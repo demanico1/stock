@@ -1726,13 +1726,14 @@
         });
         
         if (newItems.length > 0) {
-          const newItemsWithScore = newItems.map(row => ({
+          // 전체 데이터를 다시 가져와서 originalIndex를 올바르게 설정
+          currentDbData = newData.map((row, index) => ({
             row,
             score: calculateScore(row),
-            originalIndex: currentDbData.length
+            originalIndex: index
           }));
 
-          currentDbData = assignGrade([...currentDbData, ...newItemsWithScore]);
+          currentDbData = assignGrade(currentDbData);
           
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
