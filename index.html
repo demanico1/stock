@@ -1522,7 +1522,9 @@
       searchInput.value = "";
       clearButton.style.display = "none";
       
+      // 전체보기 상태로 명확히 설정
       isViewingAll = true;
+      currentSearchKeyword = "";
       
       // 전체보기 상태로 전환
       loadDBData().then(data => {
@@ -1735,12 +1737,12 @@
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
           if (currentLayout === 'db' || currentLayout === 'split') {
-            if (isViewingAll) {
-              // 전체보기 상태면 전체 데이터 업데이트
-              renderNewsCards(currentDbData, "search-results-list");
-              updateSummary(currentDbData);
-            } else if (currentSearchKeyword) {
-              // 검색어가 있는 경우, 새로운 데이터 중 검색어와 일치하는 항목이 있는지 확인
+            // 전체보기 상태면 항상 전체 데이터 업데이트
+            renderNewsCards(currentDbData, "search-results-list");
+            updateSummary(currentDbData);
+
+            // 검색어가 있는 경우, 새로운 데이터 중 검색어와 일치하는 항목이 있는지 확인
+            if (currentSearchKeyword) {
               const keywords = currentSearchKeyword.split(" ").map(k => k.toLowerCase());
               const found = newItems.some(item => {
                 const title = (item["뉴스 제목"] || item["대표 뉴스 제목"] || "").toLowerCase();
@@ -2077,9 +2079,11 @@
           if (input) {
             clearBtn.style.display = "flex";
             isViewingAll = false;
+            currentSearchKeyword = input;
           } else {
             clearBtn.style.display = "none";
             isViewingAll = true;
+            currentSearchKeyword = "";
             // 검색창이 비워졌을 때 전체보기 상태로 전환
             loadDBData().then(data => {
               if (data && data.length > 0) {
