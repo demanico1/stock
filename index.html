@@ -2024,9 +2024,38 @@
         
         // 날짜 목록 추출 및 정렬
         const dates = new Set();
+        const dateMap = new Map(); // 날짜별 시트 타입 저장
+        
         sheets.forEach(sheet => {
-          const match = sheet.name.match(/(\d{2}\.\d{2}\(\w\))/);
-          if (match) dates.add(match[1]);
+          try {
+            // 개선된 정규식: 한글/영문 요일 모두 지원
+            const match = sheet.name.match(/(\d{2}\.\d{2}\([가-힣a-zA-Z]+\))/);
+            
+            if (!match) {
+              console.warn("날짜 추출 실패:", sheet.name);
+              return; // 다음 시트로 넘어감
+            }
+            
+            const date = match[1];
+            const sheetType = sheet.name.toLowerCase().includes('hot') ? 'hot' : 
+                            sheet.name.toLowerCase().includes('db') ? 'db' : null;
+            
+            if (sheetType) {
+              if (!dateMap.has(date)) {
+                dateMap.set(date, new Set());
+              }
+              dateMap.get(date).add(sheetType);
+            }
+          } catch (e) {
+            console.warn("시트 처리 중 오류:", sheet.name, e);
+          }
+        });
+        
+        // HOT과 DB가 모두 있는 날짜만 선택
+        dateMap.forEach((types, date) => {
+          if (types.has('hot') && types.has('db')) {
+            dates.add(date);
+          }
         });
         
         // 드롭다운 옵션 생성
@@ -2037,6 +2066,18 @@
           return (bMonth + bDay) - (aMonth + aDay);
         });
         
+        // 날짜가 없으면 기본 옵션만 표시하고 비활성화
+        if (sortedDates.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = '날짜 선택 불가';
+          dateSelector.appendChild(option);
+          dateSelector.disabled = true;
+          dateSelector.style.opacity = '0.5';
+          console.log('날짜 선택 불가 → 기본 오늘 날짜로 작동');
+          return null;
+        }
+        
         sortedDates.forEach(date => {
           const option = document.createElement('option');
           option.value = date;
@@ -2045,9 +2086,17 @@
           dateSelector.appendChild(option);
         });
         
+        // 드롭다운 활성화
+        dateSelector.disabled = false;
+        dateSelector.style.opacity = '1';
+        
         return todayStr;
       } catch (error) {
         console.error('날짜 선택기 업데이트 실패:', error);
+        const dateSelector = document.getElementById('date-selector');
+        dateSelector.disabled = true;
+        dateSelector.style.opacity = '0.5';
+        console.log('날짜 선택 불가 → 기본 오늘 날짜로 작동');
         return null;
       }
     }
@@ -2119,14 +2168,52 @@
           }
         });
         
-        // 초기 데이터 로드
-        if (todayStr) {
-          await loadDataByDate(todayStr);
-        }
+        // 초기 데이터 로드 (날짜 선택 실패 시에도 오늘 날짜로 fallback)
+        const loadDate = todayStr || formatDate(new Date());
+        await loadDataByDate(loadDate);
         
         // 기존 이벤트 리스너들...
-        // ... existing code ...
-
+        document.getElementById("search-button").addEventListener("click", () => handleSearch());
+        document.getElementById("search-input").addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            handleSearch();
+          }
+        });
+        
+        // 검색어 초기화 이벤트 리스너
+        document.getElementById("search-input").addEventListener("input", (e) => {
+          const clearBtn = document.getElementById("clear-search");
+          if (e.target.value.trim()) {
+            clearBtn.style.display = "flex";
+          } else {
+            clearBtn.style.display = "none";
+            clearSearch();
+          }
+        });
+        
+        // 검색어 지우기 버튼 이벤트 리스너
+        document.getElementById("clear-search").addEventListener("click", () => {
+          document.getElementById("search-input").value = "";
+          clearSearch();
+        });
+        
+        // 스크롤 이벤트 리스너
+        window.addEventListener("scroll", handleScroll);
+        
+        // 맨 위로 버튼 클릭 이벤트 리스너
+        document.getElementById("scrollToTop").addEventListener("click", () => {
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+          });
+        });
+        
+        // URL에서 초기 상태 확인
+        initializeFromURL();
+        
+        // 주기적 업데이트 시작
+        startPeriodicUpdate();
+        
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
       }
