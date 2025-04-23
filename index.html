@@ -1577,19 +1577,22 @@
           throw new Error('검색할 데이터가 없습니다.');
         }
 
+        // 종목코드 → 종목명 자동 치환
         const searchTerms = Array.isArray(keywords) ? keywords : keywords.split(" ");
+        const processedTerms = searchTerms.map(k => {
+          if (isStockCode(k) && stockMap[k]) return stockMap[k];
+          return k;
+        });
+
         const results = data
           .filter(row => {
             const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
             const stockName = (row["종목명"] || "").toLowerCase();
             
             // 모든 검색어가 제목이나 종목명에 포함되어야 함 (AND 조건)
-            return searchTerms.every(k => {
+            return processedTerms.every(k => {
               const term = k.toLowerCase();
-              const stockNameFromCode = stockMap[k];
-              return title.includes(term) || 
-                     stockName.includes(term) ||
-                     (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
+              return title.includes(term) || stockName.includes(term);
             });
           })
           .map(row => ({ row }));
@@ -1597,11 +1600,11 @@
         if (results.length === 0) {
           // 검색 결과가 없을 때 빈 결과 표시
           currentDbData = [];
-          renderNewsCards(currentDbData, "search-results-list", searchTerms);
+          renderNewsCards(currentDbData, "search-results-list", processedTerms);
           updateSummary(currentDbData);
         } else {
           currentDbData = results;
-          renderNewsCards(currentDbData, "search-results-list", searchTerms);
+          renderNewsCards(currentDbData, "search-results-list", processedTerms);
           updateSummary(currentDbData);
         }
 
@@ -1830,9 +1833,17 @@
       
       // 오늘 날짜가 선택되었는지 확인하는 함수
       function isTodaySelected() {
-        const todayStr = formatDate(new Date());
-        const selected = document.getElementById('date-selector').value;
-        return selected === todayStr;
+        const dateSelector = document.getElementById("date-selector");
+        if (!dateSelector) return true;
+        
+        const selectedDate = dateSelector.value;
+        if (!selectedDate) return true;
+        
+        const today = new Date();
+        const [month, day] = selectedDate.split('.');
+        const selectedDateObj = new Date(today.getFullYear(), parseInt(month) - 1, parseInt(day));
+        
+        return selectedDateObj.toDateString() === today.toDateString();
       }
       
       setInterval(async () => {
@@ -2069,7 +2080,7 @@
         const sortedDates = Array.from(dates).sort((a, b) => {
           const [aMonth, aDay] = a.split('.');
           const [bMonth, bDay] = b.split('.');
-          return (aMonth + aDay) - (bMonth + bDay); // 내림차순으로 변경
+          return Number(bMonth + bDay) - Number(aMonth + aDay); // 내림차순으로 변경
         });
         
         // 날짜가 없으면 기본 옵션만 표시하고 비활성화
@@ -2133,68 +2144,68 @@
       }
     }
 
-    async function loadDataByDate(dateStr) {
+    async function loadSheetData(sheet) {
+      const response = await fetch(`/sheet/${sheet.gid}`);
+      if (!response.ok) throw new Error('시트 로드 실패');
+      return await response.json();
+    }
+
+    async function loadDataByDate(dateString) {
       try {
         // 캐시 초기화
         dbCache = null;
         hotDataCache = null;
-        currentDbData = [];
+        currentDbData = null;
         currentHotData = [];
         
-        // 종목코드 매핑 데이터 로드
-        await loadStockData();
+        const [month, day] = dateString.split('.');
+        const formattedDate = `${month}월${day}일`;
         
-        const sheets = await getSheets();
-        
-        // HOT 시트 로드
-        const hotSheet = findSheetByDate(sheets, 'hot', dateStr);
-        if (hotSheet) {
-          const response = await fetch(`/sheet/${hotSheet.gid}`);
-          if (response.ok) {
-            const hotData = await response.json();
-            currentHotData = hotData.map((row, index) => ({
-              row,
-              score: calculateScore(row),
-              originalIndex: index
-            }));
-            currentHotData = assignGrade(currentHotData);
-            renderFilteredData(currentHotData);
-          }
+        // DB 시트 찾기
+        const dbSheet = await findSheetByDate(formattedDate, 'DB');
+        if (!dbSheet) {
+          console.error(`DB 시트를 찾을 수 없습니다: ${formattedDate}`);
+          return;
         }
         
-        // DB 시트 로드
-        const dbSheet = findSheetByDate(sheets, 'db', dateStr);
-        if (dbSheet) {
-          const response = await fetch(`/sheet/${dbSheet.gid}`);
-          if (response.ok) {
-            const dbData = await response.json();
-            currentDbData = dbData.map((row, index) => ({
-              row,
-              score: calculateScore(row),
-              originalIndex: index
-            }));
-            currentDbData = assignGrade(currentDbData);
-            
-            const currentLayout = document.documentElement.getAttribute('data-layout');
-            if (currentLayout === 'db' || currentLayout === 'split') {
-              const searchInput = document.getElementById("search-input");
-              const searchQuery = searchInput.value.trim();
-              
-              if (searchQuery) {
-                handleSearch();
-              } else {
-                renderNewsCards(currentDbData, "search-results-list");
-                updateSummary(currentDbData);
-              }
-            }
-          }
+        // HOT 시트 찾기
+        const hotSheet = await findSheetByDate(formattedDate, 'HOT');
+        if (!hotSheet) {
+          console.error(`HOT 시트를 찾을 수 없습니다: ${formattedDate}`);
+          return;
         }
+        
+        // DB 데이터 로드 및 렌더링
+        const dbRaw = await loadSheetData(dbSheet);
+        if (dbRaw) {
+          currentDbData = dbRaw.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          currentDbData = assignGrade(currentDbData);
+          renderNewsCards(currentDbData, "search-results-list");
+          updateSummary(currentDbData);
+        }
+        
+        // HOT 데이터 로드 및 렌더링
+        const hotRaw = await loadSheetData(hotSheet);
+        if (hotRaw) {
+          currentHotData = hotRaw.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          currentHotData = assignGrade(currentHotData);
+          renderFilteredData(currentHotData);
+        }
+        
       } catch (error) {
-        console.error('날짜별 데이터 로드 실패:', error);
-        // 에러 발생 시에도 캐시 초기화
+        console.error('날짜별 데이터 로드 중 오류 발생:', error);
+        // 오류 발생 시 캐시 초기화
         dbCache = null;
         hotDataCache = null;
-        currentDbData = [];
+        currentDbData = null;
         currentHotData = [];
       }
     }
