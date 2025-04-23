@@ -891,8 +891,7 @@
   </div>
 
   <script>
-    let hotNewsData = [];  // HOT 뉴스 전용
-    let dbNewsData = [];   // DB 검색 결과 전용
+    let currentData = [];
     let stockMap = {};
     let dbCache = null;
     let lastDBUpdate = null;
@@ -1106,13 +1105,14 @@
       }
     }
 
-    // DB 데이터 로드 함수 수정
-    async function loadDBData(forceRefresh = false) {
-      try {
-        if (!forceRefresh && dbNewsData.length > 0) {
-          return dbNewsData;
-        }
+    // DB 데이터 로드
+    async function loadDBData(force = false) {
+      // 강제 로드가 아니고, 캐시가 있고, 마지막 업데이트가 1분 이내라면 캐시 사용
+      if (!force && dbCache && lastDBUpdate && (Date.now() - lastDBUpdate < DB_UPDATE_INTERVAL)) {
+        return dbCache;
+      }
 
+      try {
         const dbSheet = await findDbSheet();
         const response = await fetch(`/sheet/${dbSheet.gid}`);
         
@@ -1120,11 +1120,13 @@
           throw new Error(`API 오류: ${response.status}`);
         }
         
-        const data = await response.json();
-        dbNewsData = data.map((row, index) => ({ row, originalIndex: index }));
-        return dbNewsData;
+        dbCache = await response.json();
+        lastDBUpdate = Date.now();
+        
+        console.log('DB 데이터 로드 완료:', dbCache?.length || 0, '건');
+        return dbCache;
       } catch (error) {
-        console.error("DB 데이터 로드 중 오류:", error);
+        console.error('DB 데이터 로드 실패:', error);
         throw error;
       }
     }
@@ -1156,13 +1158,36 @@
       });
     }
 
-    // 뉴스 카드 렌더링
+    // 유틸리티 함수 정의
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    function throttle(func, limit) {
+      let inThrottle;
+      return function(...args) {
+        if (!inThrottle) {
+          func.apply(this, args);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      }
+    }
+
+    // renderNewsCards 함수 최적화
     function renderNewsCards(data, targetElement, keywords = []) {
-      // 렌더링 전에 중복 제거 (원본 데이터는 변경하지 않음)
       const uniqueData = getUniqueNewsForRendering(data);
-      
       const list = document.getElementById(targetElement);
-      
+      const fragment = document.createDocumentFragment();
+
       // HOT 뉴스 영역일 때는 데이터가 없으면 바로 메시지 표시
       if (targetElement === 'hot-news-list' && (!uniqueData || uniqueData.length === 0)) {
         const loadingElement = document.getElementById('hot-news-loading');
@@ -1171,24 +1196,28 @@
         if (loadingElement) loadingElement.style.display = 'none';
         if (skeletonElement) skeletonElement.style.display = 'none';
         
-        list.innerHTML = `
-          <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-            😢 아직 HOT 뉴스가 없습니다
-          </div>
-        `;
+        const emptyMessage = document.createElement('div');
+        emptyMessage.style.textAlign = 'center';
+        emptyMessage.style.padding = '20px';
+        emptyMessage.style.color = 'var(--text-secondary)';
+        emptyMessage.textContent = '😢 아직 HOT 뉴스가 없습니다';
+        fragment.appendChild(emptyMessage);
+        list.innerHTML = '';
+        list.appendChild(fragment);
         return;
       }
 
       if (targetElement === 'search-results-list') {
-        // DB 검색 결과 렌더링
-        list.innerHTML = "";
+        list.innerHTML = '';
 
         if (!uniqueData.length) {
-          list.innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-              😢 표시할 뉴스가 없습니다
-            </div>
-          `;
+          const emptyMessage = document.createElement('div');
+          emptyMessage.style.textAlign = 'center';
+          emptyMessage.style.padding = '20px';
+          emptyMessage.style.color = 'var(--text-secondary)';
+          emptyMessage.textContent = '😢 표시할 뉴스가 없습니다';
+          fragment.appendChild(emptyMessage);
+          list.appendChild(fragment);
           return;
         }
 
@@ -1202,9 +1231,7 @@
           const stockName = item.row["종목명"] || "";
           const link = item.row["링크"] || "";
           
-          // 시간 포맷팅
           const timeDisplay = parseTime(time);
-          
           const safeLink = !link || link.includes("stockinfo7.com")
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
             : link;
@@ -1213,36 +1240,70 @@
             ? highlight(title, keywords)
             : title;
 
-          card.innerHTML = `
-            <div class="news-title">${highlightedTitle}</div>
-            <div class="news-info">🕒 ${timeDisplay}</div>
-            <div class="news-info">📡 ${channelName}</div>
-            <div class="news-info">🏢 ${stockName}</div>
-            <div class="news-link" style="display:flex; gap:8px; align-items:center;">
-              <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
-              ${(!link || link.includes("stockinfo7.com")) ? 
-                `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
-            </div>
-          `;
+          const titleDiv = document.createElement("div");
+          titleDiv.className = "news-title";
+          titleDiv.innerHTML = highlightedTitle;
 
-          list.appendChild(card);
+          const timeDiv = document.createElement("div");
+          timeDiv.className = "news-info";
+          timeDiv.textContent = `🕒 ${timeDisplay}`;
+
+          const channelDiv = document.createElement("div");
+          channelDiv.className = "news-info";
+          channelDiv.textContent = `📡 ${channelName}`;
+
+          const stockDiv = document.createElement("div");
+          stockDiv.className = "news-info";
+          stockDiv.textContent = `🏢 ${stockName}`;
+
+          const linkDiv = document.createElement("div");
+          linkDiv.className = "news-link";
+          linkDiv.style.display = "flex";
+          linkDiv.style.gap = "8px";
+          linkDiv.style.alignItems = "center";
+
+          const newsLink = document.createElement("a");
+          newsLink.href = safeLink;
+          newsLink.target = "_blank";
+          newsLink.textContent = "👉 뉴스 보러가기";
+
+          linkDiv.appendChild(newsLink);
+
+          if (!link || link.includes("stockinfo7.com")) {
+            const originalLink = document.createElement("a");
+            originalLink.href = link;
+            originalLink.target = "_blank";
+            originalLink.style.color = "#d9534f";
+            originalLink.style.fontSize = "12px";
+            originalLink.textContent = "원본링크";
+            linkDiv.appendChild(originalLink);
+          }
+
+          card.appendChild(titleDiv);
+          card.appendChild(timeDiv);
+          card.appendChild(channelDiv);
+          card.appendChild(stockDiv);
+          card.appendChild(linkDiv);
+
+          fragment.appendChild(card);
         });
       } else {
-        // HOT 뉴스 렌더링 (기존 코드 유지)
         const loadingElement = document.getElementById('hot-news-loading');
         const skeletonElement = document.getElementById('hot-news-skeleton');
         
         if (loadingElement) loadingElement.style.display = 'none';
         if (skeletonElement) skeletonElement.style.display = 'none';
         
-        list.innerHTML = "";
+        list.innerHTML = '';
 
         if (!uniqueData.length) {
-          list.innerHTML = `
-            <div style="text-align:center; padding: 20px; color: var(--text-secondary);">
-              😢 표시할 뉴스가 없습니다
-            </div>
-          `;
+          const emptyMessage = document.createElement('div');
+          emptyMessage.style.textAlign = 'center';
+          emptyMessage.style.padding = '20px';
+          emptyMessage.style.color = 'var(--text-secondary)';
+          emptyMessage.textContent = '😢 표시할 뉴스가 없습니다';
+          fragment.appendChild(emptyMessage);
+          list.appendChild(fragment);
           return;
         }
 
@@ -1265,23 +1326,54 @@
             ? highlight(title, keywords)
             : title;
 
-          card.innerHTML = `
-            <div class="news-title">${highlightedTitle}</div>
-            <div class="news-info">🕒 최신 ${latestTime}${firstTime ? ` • 최초 ${firstTime}` : ''}</div>
-            <div class="news-info">
-              📡 관련뉴스 ${newsCount}건 / 언급채널 ${channelCount}개
-              ${item.score ? `<span style="font-size:11px; color:#888;">(${item.score}점)</span>` : ''}
-            </div>
-            <div class="news-link" style="display:flex; gap:8px; align-items:center;">
-              <a href="${safeLink}" target="_blank">👉 뉴스 보러가기</a>
-              ${(!link || link.includes("stockinfo7.com")) ? 
-                `<a href="${link}" target="_blank" style="color:#d9534f; font-size:12px;">원본링크</a>` : ''}
-            </div>
-          `;
+          const titleDiv = document.createElement("div");
+          titleDiv.className = "news-title";
+          titleDiv.innerHTML = highlightedTitle;
 
-          list.appendChild(card);
+          const timeDiv = document.createElement("div");
+          timeDiv.className = "news-info";
+          timeDiv.textContent = `🕒 최신 ${latestTime}${firstTime ? ` • 최초 ${firstTime}` : ''}`;
+
+          const infoDiv = document.createElement("div");
+          infoDiv.className = "news-info";
+          infoDiv.innerHTML = `📡 관련뉴스 ${newsCount}건 / 언급채널 ${channelCount}개${
+            item.score ? `<span style="font-size:11px; color:#888;">(${item.score}점)</span>` : ''
+          }`;
+
+          const linkDiv = document.createElement("div");
+          linkDiv.className = "news-link";
+          linkDiv.style.display = "flex";
+          linkDiv.style.gap = "8px";
+          linkDiv.style.alignItems = "center";
+
+          const newsLink = document.createElement("a");
+          newsLink.href = safeLink;
+          newsLink.target = "_blank";
+          newsLink.textContent = "👉 뉴스 보러가기";
+
+          linkDiv.appendChild(newsLink);
+
+          if (!link || link.includes("stockinfo7.com")) {
+            const originalLink = document.createElement("a");
+            originalLink.href = link;
+            originalLink.target = "_blank";
+            originalLink.style.color = "#d9534f";
+            originalLink.style.fontSize = "12px";
+            originalLink.textContent = "원본링크";
+            linkDiv.appendChild(originalLink);
+          }
+
+          card.appendChild(titleDiv);
+          card.appendChild(timeDiv);
+          card.appendChild(infoDiv);
+          card.appendChild(linkDiv);
+
+          fragment.appendChild(card);
         });
       }
+
+      list.innerHTML = '';
+      list.appendChild(fragment);
     }
 
     // 필터 설정 함수 수정
@@ -1314,7 +1406,7 @@
       });
       
       // 필터링된 데이터 렌더링
-      renderFilteredData();
+      renderFilteredData(currentData);
     }
 
     // URL에서 초기 필터 상태 확인하는 함수 추가
@@ -1328,14 +1420,16 @@
     }
 
     // 필터링된 데이터 렌더링
-    function renderFilteredData() {
+    function renderFilteredData(data) {
         if (currentFilter === "all") {
-            const originalOrder = [...hotNewsData].sort((a, b) => a.originalIndex - b.originalIndex);
+            // 전체: 원본 시트 순서 유지 (originalIndex 기준)
+            const originalOrder = [...data].sort((a, b) => a.originalIndex - b.originalIndex);
             renderNewsCards(originalOrder, "hot-news-list");
             return;
         }
 
-        const filtered = hotNewsData
+        // 필터링된 데이터: 해당 등급만 표시하고 점수순 정렬
+        const filtered = data
             .filter(item => item.grade === currentFilter)
             .sort((a, b) => b.score - a.score);
         
@@ -1402,19 +1496,6 @@
       // 채널 수와 뉴스 수 업데이트
       document.getElementById("channel-count").textContent = `${channels.size}건`;
       document.getElementById("news-count").textContent = `${matches.length}건`;
-    }
-
-    // 스크립트에 디바운스 함수 추가
-    function debounce(func, wait) {
-      let timeout;
-      return function executedFunction(...args) {
-        const later = () => {
-          clearTimeout(timeout);
-          func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-      };
     }
 
     // 종목코드 확인 함수
@@ -1575,13 +1656,13 @@
         const dbSheet = await findDbSheet();
         const newData = await loadDBData(true);
         
-        if (!dbNewsData || !Array.isArray(dbNewsData)) {
-          dbNewsData = newData;
+        if (!currentData || !Array.isArray(currentData)) {
+          currentData = newData;
           return false;
         }
 
         // 새로운 데이터가 있는지 확인
-        const currentIds = new Set(dbNewsData.map(item => {
+        const currentIds = new Set(currentData.map(item => {
           const title = item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "";
           const time = item.row["시간"] || item.row["최신 뉴스 시간"] || "";
           return `${title}_${time}`;
@@ -1597,10 +1678,10 @@
           const newItemsWithScore = newItems.map(row => ({
             row,
             score: calculateScore(row),
-            originalIndex: dbNewsData.length
+            originalIndex: currentData.length
           }));
 
-          dbNewsData = assignGrade([...dbNewsData, ...newItemsWithScore]);
+          currentData = assignGrade([...currentData, ...newItemsWithScore]);
           
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
@@ -1636,7 +1717,7 @@
           
           // HOT 뉴스는 레이아웃과 관계없이 항상 업데이트
           if (currentLayout !== 'db') {
-            renderFilteredData();
+            renderFilteredData(currentData);
           }
           
           return true;
@@ -1683,47 +1764,32 @@
       }
     }
 
-    // HOT 데이터 로드 함수 수정
-    async function loadHotData() {
+    // loadHotData 함수 수정
+    async function loadHotData(force = false) {
+      if (!force && hotDataCache && lastHotUpdate && 
+          (Date.now() - lastHotUpdate < HOT_UPDATE_INTERVAL)) {
+        return hotDataCache;
+      }
+
       try {
         const hotSheet = await findHotSheet();
         if (!hotSheet) {
-          throw new Error('HOT 시트를 찾을 수 없습니다.');
+          return [];  // 시트가 없으면 빈 배열 반환
         }
-
+        
         const response = await fetch(`/sheet/${hotSheet.gid}`);
         if (!response.ok) {
-          throw new Error(`API 오류: ${response.status}`);
+          console.log('HOT 데이터 로드 실패 - 잠시 후 다시 시도합니다');
+          return [];
         }
-
-        const data = await response.json();
-        if (!data || !data.length) {
-          throw new Error('HOT 뉴스를 불러올 수 없습니다.');
-        }
-
-        // 점수 계산을 위한 임시 배열 생성
-        const scores = data.map(row => {
-          const newsCount = parseInt(row["관련뉴스 수"] || "0");
-          const channelCount = parseInt(row["언급 채널 수"] || "0");
-          return calculateScore(newsCount, channelCount);
-        });
-
-        hotNewsData = data.map((row, index) => {
-          const newsCount = parseInt(row["관련뉴스 수"] || "0");
-          const channelCount = parseInt(row["언급 채널 수"] || "0");
-          const score = calculateScore(newsCount, channelCount);
-          return {
-            row,
-            originalIndex: index,
-            score,
-            grade: calculateGrade(score, data.length)
-          };
-        });
-
-        renderFilteredData();
+        
+        hotDataCache = await response.json();
+        lastHotUpdate = Date.now();
+        
+        return hotDataCache;
       } catch (error) {
-        console.error("HOT 데이터 로드 중 오류:", error);
-        throw error;
+        console.log('HOT 데이터 로드 중 일시적인 오류 발생');
+        return [];  // 에러시 빈 배열 반환
       }
     }
 
@@ -1731,7 +1797,7 @@
     async function checkHotDataUpdate() {
       try {
         // 전체 데이터를 새로 가져옴
-        const newHotData = await loadHotData();
+        const newHotData = await loadHotData(true);
         
         if (!newHotData || !Array.isArray(newHotData) || newHotData.length === 0) {
           console.log('HOT 데이터가 없습니다.');
@@ -1739,26 +1805,26 @@
         }
 
         // 새로운 데이터로 전체 교체
-        hotNewsData = newHotData.map((row, index) => ({
+        currentData = newHotData.map((row, index) => ({
           row,
           score: calculateScore(row),
           originalIndex: index
         }));
 
         // 시간 순으로 정렬 (최신순)
-        hotNewsData.sort((a, b) => {
+        currentData.sort((a, b) => {
           const timeA = new Date(a.row["최신 뉴스 시간"] || a.row["시간"] || 0);
           const timeB = new Date(b.row["최신 뉴스 시간"] || b.row["시간"] || 0);
           return timeB - timeA;
         });
 
         // 등급 할당
-        hotNewsData = assignGrade(hotNewsData);
+        currentData = assignGrade(currentData);
         
         // 필터링된 데이터 렌더링
-        renderFilteredData();
+        renderFilteredData(currentData);
         
-        console.log('HOT 데이터 업데이트 완료:', hotNewsData.length, '건');
+        console.log('HOT 데이터 업데이트 완료:', currentData.length, '건');
         return true;
       } catch (error) {
         console.error('HOT 데이터 업데이트 중 오류:', error);
@@ -1864,18 +1930,6 @@
       }
     }
 
-    // 스크롤 이벤트 쓰로틀링 함수
-    function throttle(func, limit) {
-      let inThrottle;
-      return function(...args) {
-        if (!inThrottle) {
-          func.apply(this, args);
-          inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
-        }
-      }
-    }
-
     // 컨테이너 마진 동적 설정 함수 제거
     function updateContainerMargin() {
       // 이 함수는 더 이상 필요하지 않으므로 제거
@@ -1954,78 +2008,33 @@
       });
     }
 
-    // 검색창 이벤트 핸들러 설정
-    document.addEventListener("DOMContentLoaded", () => {
+    // 초기화 코드 통합
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 이벤트 핸들러 설정
       const searchInput = document.getElementById("search-input");
+      const searchButton = document.getElementById("search-button");
       const clearButton = document.getElementById("clear-search");
       const showAllButton = document.getElementById("show-all-button");
+      const scrollButton = document.getElementById('scrollToTop');
 
-      // 입력값 변경 감지
+      // 검색창 이벤트 핸들러
       searchInput.addEventListener("input", (e) => {
         const hasValue = e.target.value.trim().length > 0;
         clearButton.style.display = hasValue ? "block" : "none";
         
-        // 값이 비어있으면 전체보기 상태로
         if (!hasValue) {
           clearSearch();
         }
       });
 
-      // X 버튼 클릭
       clearButton.addEventListener("click", clearSearch);
-
-      // 전체보기 버튼 클릭 시 검색창 초기화
       showAllButton.addEventListener("click", () => {
         searchInput.value = "";
         clearButton.style.display = "none";
       });
-    });
-
-    // 초기화
-    document.addEventListener("DOMContentLoaded", async () => {
-      const searchInput = document.getElementById("search-input");
-      const searchButton = document.getElementById("search-button");
-
-      // 디바운스 함수
-      function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-          const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-          };
-          clearTimeout(timeout);
-          timeout = setTimeout(later, wait);
-        };
-      }
-      
-      // 종목 코드 변환 함수
-      async function convertStockCode(input) {
-        try {
-          const stockData = await loadStockData();
-          const code = input.trim();
-          
-          // 6자리 숫자인 경우에만 변환 시도
-          if (/^\d{6}$/.test(code) && stockData[code]) {
-            searchInput.value = stockData[code];
-            console.log('종목 코드 변환:', code, '->', stockData[code]);
-          }
-        } catch (error) {
-          console.error('종목 코드 변환 실패:', error);
-        }
-      }
-      
-      // 입력 이벤트에 디바운스 적용
-      const debouncedConvert = debounce(convertStockCode, 300);
-      
-      // 검색창 입력 이벤트 처리
-      searchInput.addEventListener("input", (e) => {
-        debouncedConvert(e.target.value);
-      });
 
       // 검색 이벤트
       searchButton.addEventListener("click", () => handleSearch());
-
       searchInput.addEventListener("keydown", e => {
         if (e.key === "Enter") {
           e.preventDefault();
@@ -2033,8 +2042,7 @@
         }
       });
 
-      // 맨 위로 버튼 이벤트 리스너
-      const scrollButton = document.getElementById('scrollToTop');
+      // 스크롤 이벤트
       scrollButton.addEventListener('click', () => {
         window.scrollTo({
           top: 0,
@@ -2042,75 +2050,42 @@
         });
       });
 
-      // 스크롤 이벤트 리스너에 쓰로틀 적용
       window.addEventListener('scroll', throttle(() => {
         handleScroll();
       }, 100));
 
       try {
-        // 시트 목록 먼저 로드
+        // 초기 데이터 로드
         await getSheets();
-
-        // 종목 정보 로드
         await loadStockData();
-
-        // DB 데이터 미리 로드
         await loadDBData();
-
-        // HOT 데이터 미리 로드
-        const hotData = await loadHotData();
         
+        const hotData = await loadHotData();
         if (hotData) {
-          hotNewsData = hotData.map((row, index) => ({
+          currentData = hotData.map((row, index) => ({
             row,
             score: calculateScore(row),
             originalIndex: index
           }));
           
-          hotNewsData = assignGrade(hotNewsData);
+          currentData = assignGrade(currentData);
           
-          // URL에서 초기 상태 확인 후 적용
           initializeFromURL();
           
-          // URL에 필터나 검색어가 없는 경우 기본 렌더링
           if (!new URLSearchParams(window.location.search).has('filter') && 
               !new URLSearchParams(window.location.search).has('search')) {
-            renderNewsCards(hotNewsData, "hot-news-list");
+            renderNewsCards(currentData, "hot-news-list");
           }
         }
 
-        // 주기적 업데이트 시작
         startPeriodicUpdate();
-
-        // 초기 테마 설정
         setTheme('light');
-        
-        // 초기 레이아웃을 HOT으로 설정
         setLayout('hot');
 
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
       }
     });
-
-    // 등급 계산 함수 추가
-    function calculateGrade(score, totalCount) {
-      if (!totalCount) return '';
-      
-      // 점수 내림차순 정렬을 위한 임시 배열 생성
-      const scores = Array.from({ length: totalCount }, (_, i) => i);
-      const sortedScores = [...scores].sort((a, b) => b - a);
-      
-      // 점수 순위 계산
-      const rank = sortedScores.indexOf(score) + 1;
-      const percentile = (rank / totalCount) * 100;
-      
-      // 등급 할당
-      if (percentile <= 25) return 'top';
-      if (percentile <= 50) return 'mid';
-      if (percentile <= 75) return 'low';
-      return '';
-    }
   </script>
 </body>
 </html>
