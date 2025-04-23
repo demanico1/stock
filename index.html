@@ -891,7 +891,8 @@
   </div>
 
   <script>
-    let currentData = [];
+    let currentHotData = [];
+    let currentDbData = [];
     let stockMap = {};
     let dbCache = null;
     let lastDBUpdate = null;
@@ -1405,8 +1406,9 @@
         behavior: 'smooth'
       });
       
-      // 필터링된 데이터 렌더링
-      renderFilteredData(currentData);
+      // [HOT/DB 분리] 필터는 HOT 뉴스 영역(currentHotData)에만 적용됩니다
+      // DB 검색 영역은 필터링 대상이 아닙니다
+      renderFilteredData(currentHotData);
     }
 
     // URL에서 초기 필터 상태 확인하는 함수 추가
@@ -1511,6 +1513,28 @@
       return input;
     }
 
+    // 검색어 초기화 함수
+    function clearSearch() {
+      const searchInput = document.getElementById("search-input");
+      const clearButton = document.getElementById("clear-search");
+      searchInput.value = "";
+      clearButton.style.display = "none";
+      
+      // 전체보기 상태로 전환
+      loadDBData().then(data => {
+        if (data && data.length > 0) {
+          currentDbData = data.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          currentDbData = assignGrade(currentDbData);
+          renderNewsCards(currentDbData, "search-results-list");
+          updateSummary(currentDbData);
+        }
+      });
+    }
+
     // 검색 처리 함수 수정
     async function handleSearch(initialSearch = false) {
       const input = !initialSearch ? document.getElementById("search-input").value.trim() : '';
@@ -1584,11 +1608,13 @@
             })
             .map(row => ({ row }));
           
-          renderNewsCards(freshResults, "search-results-list", searchTerms);
-          updateSummary(freshResults);
+          currentDbData = freshResults;
+          renderNewsCards(currentDbData, "search-results-list", searchTerms);
+          updateSummary(currentDbData);
         } else {
-          renderNewsCards(results, "search-results-list", searchTerms);
-          updateSummary(results);
+          currentDbData = results;
+          renderNewsCards(currentDbData, "search-results-list", searchTerms);
+          updateSummary(currentDbData);
         }
 
       } catch (error) {
@@ -1612,8 +1638,14 @@
       try {
         const data = await loadDBData();
         if (data && data.length > 0) {
-          renderNewsCards(data.map(row => ({ row })), "search-results-list");
-          updateSummary(data.map(row => ({ row })));
+          currentDbData = data.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          currentDbData = assignGrade(currentDbData);
+          renderNewsCards(currentDbData, "search-results-list");
+          updateSummary(currentDbData);
         }
       } catch (error) {
         console.error("전체보기 중 오류:", error);
@@ -1656,13 +1688,13 @@
         const dbSheet = await findDbSheet();
         const newData = await loadDBData(true);
         
-        if (!currentData || !Array.isArray(currentData)) {
-          currentData = newData;
+        if (!currentDbData || !Array.isArray(currentDbData)) {
+          currentDbData = newData;
           return false;
         }
 
         // 새로운 데이터가 있는지 확인
-        const currentIds = new Set(currentData.map(item => {
+        const currentIds = new Set(currentDbData.map(item => {
           const title = item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "";
           const time = item.row["시간"] || item.row["최신 뉴스 시간"] || "";
           return `${title}_${time}`;
@@ -1678,10 +1710,10 @@
           const newItemsWithScore = newItems.map(row => ({
             row,
             score: calculateScore(row),
-            originalIndex: currentData.length
+            originalIndex: currentDbData.length
           }));
 
-          currentData = assignGrade([...currentData, ...newItemsWithScore]);
+          currentDbData = assignGrade([...currentDbData, ...newItemsWithScore]);
           
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
@@ -1713,11 +1745,6 @@
                 updateSummary(newData.map(row => ({ row })));
               }
             }
-          }
-          
-          // HOT 뉴스는 레이아웃과 관계없이 항상 업데이트
-          if (currentLayout !== 'db') {
-            renderFilteredData(currentData);
           }
           
           return true;
@@ -1805,26 +1832,26 @@
         }
 
         // 새로운 데이터로 전체 교체
-        currentData = newHotData.map((row, index) => ({
+        currentHotData = newHotData.map((row, index) => ({
           row,
           score: calculateScore(row),
           originalIndex: index
         }));
 
         // 시간 순으로 정렬 (최신순)
-        currentData.sort((a, b) => {
+        currentHotData.sort((a, b) => {
           const timeA = new Date(a.row["최신 뉴스 시간"] || a.row["시간"] || 0);
           const timeB = new Date(b.row["최신 뉴스 시간"] || b.row["시간"] || 0);
           return timeB - timeA;
         });
 
         // 등급 할당
-        currentData = assignGrade(currentData);
+        currentHotData = assignGrade(currentHotData);
         
         // 필터링된 데이터 렌더링
-        renderFilteredData(currentData);
+        renderFilteredData(currentHotData);
         
-        console.log('HOT 데이터 업데이트 완료:', currentData.length, '건');
+        console.log('HOT 데이터 업데이트 완료:', currentHotData.length, '건');
         return true;
       } catch (error) {
         console.error('HOT 데이터 업데이트 중 오류:', error);
@@ -1992,92 +2019,34 @@
       }
     }
 
-    // 검색어 초기화 함수
-    function clearSearch() {
-      const searchInput = document.getElementById("search-input");
-      const clearButton = document.getElementById("clear-search");
-      searchInput.value = "";
-      clearButton.style.display = "none";
-      
-      // 전체보기 상태로 전환
-      loadDBData().then(data => {
-        if (data && data.length > 0) {
-          renderNewsCards(data.map(row => ({ row })), "search-results-list");
-          updateSummary(data.map(row => ({ row })));
-        }
-      });
-    }
-
     // 초기화 코드 통합
     document.addEventListener("DOMContentLoaded", async () => {
-      // 이벤트 핸들러 설정
-      const searchInput = document.getElementById("search-input");
-      const searchButton = document.getElementById("search-button");
-      const clearButton = document.getElementById("clear-search");
-      const showAllButton = document.getElementById("show-all-button");
-      const scrollButton = document.getElementById('scrollToTop');
-
-      // 검색창 이벤트 핸들러
-      searchInput.addEventListener("input", (e) => {
-        const hasValue = e.target.value.trim().length > 0;
-        clearButton.style.display = hasValue ? "block" : "none";
-        
-        if (!hasValue) {
-          clearSearch();
-        }
-      });
-
-      clearButton.addEventListener("click", clearSearch);
-      showAllButton.addEventListener("click", () => {
-        searchInput.value = "";
-        clearButton.style.display = "none";
-      });
-
-      // 검색 이벤트
-      searchButton.addEventListener("click", () => handleSearch());
-      searchInput.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          handleSearch();
-        }
-      });
-
-      // 스크롤 이벤트
-      scrollButton.addEventListener('click', () => {
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      });
-
-      window.addEventListener('scroll', throttle(() => {
-        handleScroll();
-      }, 100));
-
       try {
-        // 초기 데이터 로드
         await getSheets();
         await loadStockData();
-        await loadDBData();
+        
+        // [HOT/DB 분리] 초기화 순서 유지
+        const dbData = await loadDBData();
+        currentDbData = dbData.map((row, index) => ({
+          row,
+          score: calculateScore(row),
+          originalIndex: index
+        }));
+        // [HOT/DB 분리] DB 데이터에도 등급 할당
+        currentDbData = assignGrade(currentDbData);
         
         const hotData = await loadHotData();
         if (hotData) {
-          currentData = hotData.map((row, index) => ({
+          currentHotData = hotData.map((row, index) => ({
             row,
             score: calculateScore(row),
             originalIndex: index
           }));
           
-          currentData = assignGrade(currentData);
-          
-          initializeFromURL();
-          
-          if (!new URLSearchParams(window.location.search).has('filter') && 
-              !new URLSearchParams(window.location.search).has('search')) {
-            renderNewsCards(currentData, "hot-news-list");
-          }
+          currentHotData = assignGrade(currentHotData);
         }
 
+        initializeFromURL();
         startPeriodicUpdate();
         setTheme('light');
         setLayout('hot');
