@@ -1738,32 +1738,25 @@
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
           if (currentLayout === 'db' || currentLayout === 'split') {
-            // 전체보기 상태면 originalIndex 기준으로 정렬
-            if (isViewingAll) {
-              currentDbData.sort((a, b) => a.originalIndex - b.originalIndex);
-            }
-            
-            renderNewsCards(currentDbData, "search-results-list");
-            updateSummary(currentDbData);
-
-            // 검색어가 있는 경우, 새로운 데이터 중 검색어와 일치하는 항목이 있는지 확인
+            // 검색어가 있는 경우, 검색어와 일치하는 항목만 필터링
             if (currentSearchKeyword) {
               const keywords = currentSearchKeyword.split(" ").map(k => k.toLowerCase());
-              const found = newItems.some(item => {
-                const title = (item["뉴스 제목"] || item["대표 뉴스 제목"] || "").toLowerCase();
-                const stockName = (item["종목명"] || "").toLowerCase();
+              currentDbData = currentDbData.filter(item => {
+                const title = (item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "").toLowerCase();
+                const stockName = (item.row["종목명"] || "").toLowerCase();
                 return keywords.every(kw => 
                   title.includes(kw) || 
                   stockName.includes(kw) ||
                   (stockMap[kw] && stockName.includes(stockMap[kw].toLowerCase()))
                 );
               });
-
-              if (found) {
-                // 검색어와 일치하는 새로운 데이터가 있으면 재검색
-                handleSearch();
-              }
+            } else {
+              // 전체보기 상태면 originalIndex 기준으로 정렬
+              currentDbData.sort((a, b) => a.originalIndex - b.originalIndex);
             }
+            
+            renderNewsCards(currentDbData, "search-results-list", currentSearchKeyword ? currentSearchKeyword.split(" ") : []);
+            updateSummary(currentDbData);
           }
           
           return true;
