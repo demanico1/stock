@@ -1571,8 +1571,8 @@
       `;
 
       try {
-        // DB 데이터 로드 (또는 캐시 사용)
-        const data = await loadDBData();
+        // currentDbData가 있으면 그것을 사용, 없으면 loadDBData() 호출
+        const data = currentDbData.length ? currentDbData.map(d => d.row) : await loadDBData();
         if (!data || !data.length) {
           throw new Error('검색할 데이터가 없습니다.');
         }
@@ -1595,23 +1595,8 @@
           .map(row => ({ row }));
 
         if (results.length === 0) {
-          const freshData = await loadDBData(true);
-          const freshResults = freshData
-            .filter(row => {
-              const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
-              const stockName = (row["종목명"] || "").toLowerCase();
-              
-              return searchTerms.every(k => {
-                const term = k.toLowerCase();
-                const stockNameFromCode = stockMap[k];
-                return title.includes(term) || 
-                       stockName.includes(term) ||
-                       (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
-              });
-            })
-            .map(row => ({ row }));
-          
-          currentDbData = freshResults;
+          // 검색 결과가 없을 때 빈 결과 표시
+          currentDbData = [];
           renderNewsCards(currentDbData, "search-results-list", searchTerms);
           updateSummary(currentDbData);
         } else {
@@ -2053,7 +2038,10 @@
             const match = sheet.name.match(/(\d{2}\.\d{2}\([가-힣a-zA-Z]+\))/);
             
             if (!match) {
-              console.warn("날짜 추출 실패:", sheet.name);
+              // HOT/DB 시트에 한해서만 간단한 경고 표시
+              if (sheet.name.toLowerCase().includes('hot') || sheet.name.toLowerCase().includes('db')) {
+                console.warn("날짜 형식이 없는 HOT/DB 시트:", sheet.name);
+              }
               return; // 다음 시트로 넘어감
             }
             
@@ -2081,7 +2069,7 @@
         const sortedDates = Array.from(dates).sort((a, b) => {
           const [aMonth, aDay] = a.split('.');
           const [bMonth, bDay] = b.split('.');
-          return (bMonth + bDay) - (aMonth + aDay);
+          return (aMonth + aDay) - (bMonth + bDay); // 내림차순으로 변경
         });
         
         // 날짜가 없으면 기본 옵션만 표시하고 비활성화
@@ -2152,6 +2140,9 @@
         hotDataCache = null;
         currentDbData = [];
         currentHotData = [];
+        
+        // 종목코드 매핑 데이터 로드
+        await loadStockData();
         
         const sheets = await getSheets();
         
