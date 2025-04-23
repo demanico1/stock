@@ -1689,7 +1689,12 @@
         const newData = await loadDBData(true);
         
         if (!currentDbData || !Array.isArray(currentDbData)) {
-          currentDbData = newData;
+          currentDbData = newData.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          currentDbData = assignGrade(currentDbData);
           return false;
         }
 
@@ -1718,32 +1723,16 @@
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
           if (currentLayout === 'db' || currentLayout === 'split') {
-            const searchResultsList = document.getElementById("search-results-list");
-            if (searchResultsList && searchResultsList.children.length > 0) {
-              const searchInput = document.getElementById("search-input");
-              const searchQuery = searchInput.value.trim();
-              
-              if (searchQuery) {
-                // 검색 중이면 해당 검색어로 다시 검색
-                const results = newData.filter(row => {
-                  const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
-                  const stockName = (row["종목명"] || "").toLowerCase();
-                  const term = searchQuery.toLowerCase();
-                  const stockNameFromCode = stockMap[searchQuery];
-                  return title.includes(term) || 
-                         stockName.includes(term) ||
-                         (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
-                }).map(row => ({ row }));
-                
-                if (results.length > 0) {
-                  renderNewsCards([...results], "search-results-list", [searchQuery]);
-                  updateSummary(results);
-                }
-              } else {
-                // 전체보기 상태면 전체 데이터 업데이트
-                renderNewsCards(newData.map(row => ({ row })), "search-results-list");
-                updateSummary(newData.map(row => ({ row })));
-              }
+            const searchInput = document.getElementById("search-input");
+            const searchQuery = searchInput.value.trim();
+            
+            if (searchQuery) {
+              // 검색 중이면 해당 검색어로 다시 검색
+              handleSearch();
+            } else {
+              // 전체보기 상태면 전체 데이터 업데이트
+              renderNewsCards(currentDbData, "search-results-list");
+              updateSummary(currentDbData);
             }
           }
           
@@ -2024,6 +2013,35 @@
       try {
         await getSheets();
         await loadStockData();
+        
+        // 종목코드 자동 치환 기능 추가
+        document.getElementById("search-input").addEventListener("input", (e) => {
+          const input = e.target.value.trim();
+          if (isStockCode(input) && stockMap[input]) {
+            e.target.value = stockMap[input];
+          }
+        });
+        
+        // 스크롤 이벤트 리스너 추가
+        window.addEventListener("scroll", handleScroll);
+        
+        // 맨 위로 버튼 클릭 이벤트 추가
+        document.getElementById("scrollToTop").addEventListener("click", () => {
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+          });
+        });
+        
+        // 검색 버튼 이벤트 리스너 추가
+        document.getElementById("search-button").addEventListener("click", () => handleSearch());
+        
+        // 검색 입력창 Enter 키 이벤트 추가
+        document.getElementById("search-input").addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            handleSearch();
+          }
+        });
         
         // [HOT/DB 분리] 초기화 순서 유지
         const dbData = await loadDBData();
