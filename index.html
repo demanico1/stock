@@ -1635,21 +1635,9 @@
 
     // 전체보기 버튼 이벤트 핸들러 추가
     document.getElementById("show-all-button").addEventListener("click", async () => {
-      try {
-        const data = await loadDBData();
-        if (data && data.length > 0) {
-          currentDbData = data.map((row, index) => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: index
-          }));
-          currentDbData = assignGrade(currentDbData);
-          renderNewsCards(currentDbData, "search-results-list");
-          updateSummary(currentDbData);
-        }
-      } catch (error) {
-        console.error("전체보기 중 오류:", error);
-      }
+      document.getElementById("search-input").value = "";
+      document.getElementById("clear-search").style.display = "none";
+      clearSearch();
     });
 
     // URL에서 초기 상태를 확인하는 함수 수정
@@ -2012,7 +2000,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
       try {
         await getSheets();
-        await loadStockData();
+        stockMap = await loadStockData();  // stockMap에 종목정보 할당
         
         // 종목코드 자동 치환 기능 추가
         document.getElementById("search-input").addEventListener("input", (e) => {
@@ -2043,6 +2031,26 @@
           }
         });
         
+        // 검색창 입력 이벤트 리스너 추가
+        document.getElementById("search-input").addEventListener("input", (e) => {
+          const clearBtn = document.getElementById("clear-search");
+          const input = e.target.value.trim();
+          
+          if (input) {
+            clearBtn.style.display = "flex";
+          } else {
+            clearBtn.style.display = "none";
+            clearSearch(); // 입력값이 비었을 때 전체보기로 전환
+          }
+        });
+        
+        // clear-search 버튼 클릭 이벤트 추가
+        document.getElementById("clear-search").addEventListener("click", () => {
+          document.getElementById("search-input").value = "";
+          document.getElementById("clear-search").style.display = "none";
+          clearSearch();
+        });
+        
         // [HOT/DB 분리] 초기화 순서 유지
         const dbData = await loadDBData();
         currentDbData = dbData.map((row, index) => ({
@@ -2065,6 +2073,10 @@
         }
 
         initializeFromURL();
+        
+        // HOT 데이터 즉시 로딩 추가
+        await checkHotDataUpdate();
+        
         startPeriodicUpdate();
         setTheme('light');
         setLayout('hot');
