@@ -306,7 +306,8 @@
 
     .new-badge {
       position: absolute;
-      top: 8px;
+      top: 50%;
+      transform: translateY(-50%);
       right: 8px;
       background: #ff4757;
       color: white;
@@ -1624,13 +1625,15 @@
           .filter(row => {
             const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
             const stockName = (row["종목명"] || "").toLowerCase();
+            const channelName = (row["채널명"] || "").toLowerCase();
             
-            // 모든 검색어가 제목이나 종목명에 포함되어야 함 (AND 조건)
+            // 모든 검색어가 제목이나 종목명이나 채널명에 포함되어야 함 (AND 조건)
             return searchTerms.every(k => {
               const term = k.toLowerCase();
               const stockNameFromCode = stockMap[k];
               return title.includes(term) || 
                      stockName.includes(term) ||
+                     channelName.includes(term) ||
                      (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
             });
           })
@@ -1642,12 +1645,14 @@
             .filter(row => {
               const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
               const stockName = (row["종목명"] || "").toLowerCase();
+              const channelName = (row["채널명"] || "").toLowerCase();
               
               return searchTerms.every(k => {
                 const term = k.toLowerCase();
                 const stockNameFromCode = stockMap[k];
                 return title.includes(term) || 
                        stockName.includes(term) ||
+                       channelName.includes(term) ||
                        (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
               });
             })
@@ -1780,9 +1785,11 @@
               currentDbData = currentDbData.filter(item => {
                 const title = (item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "").toLowerCase();
                 const stockName = (item.row["종목명"] || "").toLowerCase();
+                const channelName = (item.row["채널명"] || "").toLowerCase();
                 return keywords.every(kw => 
                   title.includes(kw) || 
                   stockName.includes(kw) ||
+                  channelName.includes(kw) ||
                   (stockMap[kw] && stockName.includes(stockMap[kw].toLowerCase()))
                 );
               });
