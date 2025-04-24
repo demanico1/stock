@@ -887,10 +887,10 @@
           <button id="search-button">검색</button>
         </div>
         <div id="naver-news-link" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px 0;"></div>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <button id="show-all-button" style="font-size: 12px;">전체보기</button>
-          <select id="channel-filter-dropdown" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
-            <option value="">전체 채널 보기</option>
+        <div class="filter-controls" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: 100%;">
+          <button id="show-all-button" style="font-size: 12px; white-space: nowrap;">전체보기</button>
+          <select id="channel-filter-dropdown" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); min-width: 120px; max-width: 100%;">
+            <option value="">채널선택</option>
           </select>
         </div>
       </div>
@@ -2193,7 +2193,7 @@
       }
     });
 
-    // 채널 드롭다운 업데이트 함수 추가
+    // 채널 드롭다운 업데이트 함수 수정
     function updateChannelDropdown() {
       const dropdown = document.getElementById("channel-filter-dropdown");
       const channelsInResults = [...new Set(currentDbData
@@ -2201,8 +2201,14 @@
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b)))];
 
-      // 기존 옵션 초기화 (전체 채널 보기 옵션은 유지)
-      dropdown.innerHTML = '<option value="">전체 채널 보기</option>';
+      // 현재 선택된 값 저장
+      const currentValue = dropdown.value;
+
+      // 기존 옵션 초기화
+      dropdown.innerHTML = `
+        <option value="">채널선택</option>
+        <option value="all">🔄 전체보기</option>
+      `;
 
       // 채널 옵션 추가
       channelsInResults.forEach(channel => {
@@ -2211,19 +2217,33 @@
         option.textContent = channel;
         dropdown.appendChild(option);
       });
+
+      // 이전에 선택된 값이 있다면 유지
+      if (currentValue && channelsInResults.includes(currentValue)) {
+        dropdown.value = currentValue;
+      }
     }
 
-    // 드롭다운 이벤트 리스너 추가
+    // 드롭다운 이벤트 리스너 수정
     document.addEventListener("DOMContentLoaded", async () => {
       // ... existing DOMContentLoaded code ...
 
-      // 채널 드롭다운 이벤트 리스너 추가
+      // 채널 드롭다운 이벤트 리스너 수정
       document.getElementById("channel-filter-dropdown").addEventListener("change", (e) => {
-        const selectedChannel = e.target.value;
-        if (selectedChannel) {
-          document.getElementById("search-input").value = selectedChannel;
+        const selectedValue = e.target.value;
+        if (selectedValue === "all") {
+          clearSearch();
+          e.target.value = ""; // 드롭다운 초기화
+        } else if (selectedValue) {
+          document.getElementById("search-input").value = selectedValue;
           handleSearch();
         }
+      });
+
+      // 전체보기 버튼 이벤트 리스너 수정
+      document.getElementById("show-all-button").addEventListener("click", () => {
+        clearSearch();
+        document.getElementById("channel-filter-dropdown").value = ""; // 드롭다운 초기화
       });
 
       // ... rest of the existing code ...
