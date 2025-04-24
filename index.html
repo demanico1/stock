@@ -887,7 +887,12 @@
           <button id="search-button">검색</button>
         </div>
         <div id="naver-news-link" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px 0;"></div>
-        <button id="show-all-button" style="font-size: 12px; margin-top: 8px;">전체보기</button>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="show-all-button" style="font-size: 12px;">전체보기</button>
+          <select id="channel-filter-dropdown" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color);">
+            <option value="">전체 채널 보기</option>
+          </select>
+        </div>
       </div>
 
       <div id="searching-text" class="spinner-blink" style="display:none;">
@@ -1413,6 +1418,11 @@
 
       list.innerHTML = '';
       list.appendChild(fragment);
+
+      // 검색 결과 렌더링 후 채널 드롭다운 업데이트
+      if (targetElement === 'search-results-list') {
+        updateChannelDropdown();
+      }
     }
 
     // 필터 설정 함수 수정
@@ -2181,6 +2191,42 @@
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
       }
+    });
+
+    // 채널 드롭다운 업데이트 함수 추가
+    function updateChannelDropdown() {
+      const dropdown = document.getElementById("channel-filter-dropdown");
+      const channelsInResults = [...new Set(currentDbData
+        .map(item => item.row["채널명"])
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)))];
+
+      // 기존 옵션 초기화 (전체 채널 보기 옵션은 유지)
+      dropdown.innerHTML = '<option value="">전체 채널 보기</option>';
+
+      // 채널 옵션 추가
+      channelsInResults.forEach(channel => {
+        const option = document.createElement("option");
+        option.value = channel;
+        option.textContent = channel;
+        dropdown.appendChild(option);
+      });
+    }
+
+    // 드롭다운 이벤트 리스너 추가
+    document.addEventListener("DOMContentLoaded", async () => {
+      // ... existing DOMContentLoaded code ...
+
+      // 채널 드롭다운 이벤트 리스너 추가
+      document.getElementById("channel-filter-dropdown").addEventListener("change", (e) => {
+        const selectedChannel = e.target.value;
+        if (selectedChannel) {
+          document.getElementById("search-input").value = selectedChannel;
+          handleSearch();
+        }
+      });
+
+      // ... rest of the existing code ...
     });
   </script>
 </body>
