@@ -927,6 +927,7 @@
     let currentFilter = 'all';
     let isViewingAll = true;
     let currentSearchKeyword = "";
+    let suppressHighlight = false; // 하이라이트 제어를 위한 전역 플래그 추가
     const DB_UPDATE_INTERVAL = 300000; // 5분
     const HOT_UPDATE_INTERVAL = 300000; // 5분
     let lastDataTimestamp = null;
@@ -1280,7 +1281,7 @@
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
             : link;
 
-          const highlightedTitle = keywords.length 
+          const highlightedTitle = (!suppressHighlight && keywords.length) 
             ? highlight(title, keywords)
             : title;
 
@@ -1366,7 +1367,7 @@
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
             : link;
 
-          const highlightedTitle = keywords.length 
+          const highlightedTitle = (!suppressHighlight && keywords.length) 
             ? highlight(title, keywords)
             : title;
 
@@ -2090,9 +2091,36 @@
         // 전체보기 상태로 초기화
         isViewingAll = true;
         
+        // 시트 목록과 종목 정보를 먼저 로드
         await getSheets();
-        stockMap = await loadStockData();  // stockMap에 종목정보 할당
+        stockMap = await loadStockData();
         
+        // DB와 HOT 데이터를 병렬로 로드
+        const [dbData, hotData] = await Promise.all([
+          loadDBData(),
+          loadHotData()
+        ]);
+
+        // DB 데이터 설정
+        if (dbData) {
+          currentDbData = dbData.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          currentDbData = assignGrade(currentDbData);
+        }
+
+        // HOT 데이터 설정
+        if (hotData) {
+          currentHotData = hotData.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          currentHotData = assignGrade(currentHotData);
+        }
+
         // 종목코드 자동 치환 기능 추가
         document.getElementById("search-input").addEventListener("input", (e) => {
           const input = e.target.value.trim();
@@ -2122,8 +2150,9 @@
           }
         });
         
-        // 검색창 입력 이벤트 리스너 수정
+        // 검색창 입력 이벤트 리스너
         document.getElementById("search-input").addEventListener("input", (e) => {
+          suppressHighlight = false; // 직접 검색 시 하이라이트 복원
           const clearBtn = document.getElementById("clear-search");
           const input = e.target.value.trim();
           
@@ -2135,19 +2164,7 @@
             clearBtn.style.display = "none";
             isViewingAll = true;
             currentSearchKeyword = "";
-            // 검색창이 비워졌을 때 전체보기 상태로 전환
-            loadDBData().then(data => {
-              if (data && data.length > 0) {
-                currentDbData = data.map((row, index) => ({
-                  row,
-                  score: calculateScore(row),
-                  originalIndex: index
-                }));
-                currentDbData = assignGrade(currentDbData);
-                renderNewsCards(currentDbData, "search-results-list");
-                updateSummary(currentDbData);
-              }
-            });
+            clearSearch();
           }
         });
         
@@ -2157,34 +2174,35 @@
           document.getElementById("clear-search").style.display = "none";
           clearSearch();
         });
-        
-        // [HOT/DB 분리] 초기화 순서 유지
-        const dbData = await loadDBData();
-        currentDbData = dbData.map((row, index) => ({
-          row,
-          score: calculateScore(row),
-          originalIndex: index
-        }));
-        // [HOT/DB 분리] DB 데이터에도 등급 할당
-        currentDbData = assignGrade(currentDbData);
-        
-        const hotData = await loadHotData();
-        if (hotData) {
-          currentHotData = hotData.map((row, index) => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: index
-          }));
-          
-          currentHotData = assignGrade(currentHotData);
-        }
 
+        // 채널 드롭다운 이벤트 리스너
+        document.getElementById("channel-filter-dropdown").addEventListener("change", (e) => {
+          const selectedValue = e.target.value;
+          if (selectedValue === "all") {
+            suppressHighlight = false; // 전체보기 선택 시 하이라이트 복원
+            clearSearch();
+            e.target.value = ""; // 드롭다운 초기화
+          } else if (selectedValue) {
+            suppressHighlight = true; // 채널 선택 시 하이라이트 제거
+            document.getElementById("search-input").value = selectedValue;
+            handleSearch();
+          }
+        });
+
+        // 전체보기 버튼 이벤트 리스너
+        document.getElementById("show-all-button").addEventListener("click", () => {
+          suppressHighlight = false; // 전체보기 선택 시 하이라이트 복원
+          clearSearch();
+          document.getElementById("channel-filter-dropdown").value = ""; // 드롭다운 초기화
+        });
+        
+        // URL 기반 초기화 및 렌더링
         initializeFromURL();
         
-        // HOT 데이터 즉시 로딩 추가
-        await checkHotDataUpdate();
-        
+        // 주기적 업데이트 시작
         startPeriodicUpdate();
+        
+        // 테마 및 레이아웃 설정
         setTheme('light');
         setLayout('hot');
 
@@ -2196,8 +2214,8 @@
     // 채널 드롭다운 업데이트 함수 수정
     function updateChannelDropdown() {
       const dropdown = document.getElementById("channel-filter-dropdown");
-      const channelsInResults = [...new Set(currentDbData
-        .map(item => item.row["채널명"])
+      const channelsInResults = [...new Set((dbCache || [])
+        .map(row => row["채널명"])
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b)))];
 
@@ -2232,9 +2250,11 @@
       document.getElementById("channel-filter-dropdown").addEventListener("change", (e) => {
         const selectedValue = e.target.value;
         if (selectedValue === "all") {
+          suppressHighlight = false; // 전체보기 선택 시 하이라이트 복원
           clearSearch();
           e.target.value = ""; // 드롭다운 초기화
         } else if (selectedValue) {
+          suppressHighlight = true; // 채널 선택 시 하이라이트 제거
           document.getElementById("search-input").value = selectedValue;
           handleSearch();
         }
@@ -2242,6 +2262,7 @@
 
       // 전체보기 버튼 이벤트 리스너 수정
       document.getElementById("show-all-button").addEventListener("click", () => {
+        suppressHighlight = false; // 전체보기 선택 시 하이라이트 복원
         clearSearch();
         document.getElementById("channel-filter-dropdown").value = ""; // 드롭다운 초기화
       });
