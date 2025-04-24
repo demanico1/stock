@@ -306,8 +306,7 @@
 
     .new-badge {
       position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
+      top: 8px;
       right: 8px;
       background: #ff4757;
       color: white;
@@ -887,12 +886,7 @@
           <button id="search-button">검색</button>
         </div>
         <div id="naver-news-link" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px 0;"></div>
-        <div class="filter-controls" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: 100%;">
-          <button id="show-all-button" style="font-size: 12px; white-space: nowrap;">전체보기</button>
-          <select id="channel-filter-dropdown" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-color); min-width: 120px; max-width: 100%;">
-            <option value="">채널선택</option>
-          </select>
-        </div>
+        <button id="show-all-button" style="font-size: 12px; margin-top: 8px;">전체보기</button>
       </div>
 
       <div id="searching-text" class="spinner-blink" style="display:none;">
@@ -927,7 +921,6 @@
     let currentFilter = 'all';
     let isViewingAll = true;
     let currentSearchKeyword = "";
-    let suppressHighlight = false; // 하이라이트 제어를 위한 전역 플래그 추가
     const DB_UPDATE_INTERVAL = 300000; // 5분
     const HOT_UPDATE_INTERVAL = 300000; // 5분
     let lastDataTimestamp = null;
@@ -1281,7 +1274,7 @@
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
             : link;
 
-          const highlightedTitle = (!suppressHighlight && keywords.length) 
+          const highlightedTitle = keywords.length 
             ? highlight(title, keywords)
             : title;
 
@@ -1295,7 +1288,7 @@
 
           const channelDiv = document.createElement("div");
           channelDiv.className = "news-info";
-          channelDiv.innerHTML = `📡 ${highlight(channelName, keywords)}`;
+          channelDiv.textContent = `📡 ${channelName}`;
 
           const stockDiv = document.createElement("div");
           stockDiv.className = "news-info";
@@ -1367,7 +1360,7 @@
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
             : link;
 
-          const highlightedTitle = (!suppressHighlight && keywords.length) 
+          const highlightedTitle = keywords.length 
             ? highlight(title, keywords)
             : title;
 
@@ -1419,11 +1412,6 @@
 
       list.innerHTML = '';
       list.appendChild(fragment);
-
-      // 검색 결과 렌더링 후 채널 드롭다운 업데이트
-      if (targetElement === 'search-results-list') {
-        updateChannelDropdown();
-      }
     }
 
     // 필터 설정 함수 수정
@@ -1636,15 +1624,13 @@
           .filter(row => {
             const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
             const stockName = (row["종목명"] || "").toLowerCase();
-            const channelName = (row["채널명"] || "").toLowerCase();
             
-            // 모든 검색어가 제목이나 종목명이나 채널명에 포함되어야 함 (AND 조건)
+            // 모든 검색어가 제목이나 종목명에 포함되어야 함 (AND 조건)
             return searchTerms.every(k => {
               const term = k.toLowerCase();
               const stockNameFromCode = stockMap[k];
               return title.includes(term) || 
                      stockName.includes(term) ||
-                     channelName.includes(term) ||
                      (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
             });
           })
@@ -1656,14 +1642,12 @@
             .filter(row => {
               const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
               const stockName = (row["종목명"] || "").toLowerCase();
-              const channelName = (row["채널명"] || "").toLowerCase();
               
               return searchTerms.every(k => {
                 const term = k.toLowerCase();
                 const stockNameFromCode = stockMap[k];
                 return title.includes(term) || 
                        stockName.includes(term) ||
-                       channelName.includes(term) ||
                        (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
               });
             })
@@ -1796,11 +1780,9 @@
               currentDbData = currentDbData.filter(item => {
                 const title = (item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "").toLowerCase();
                 const stockName = (item.row["종목명"] || "").toLowerCase();
-                const channelName = (item.row["채널명"] || "").toLowerCase();
                 return keywords.every(kw => 
                   title.includes(kw) || 
                   stockName.includes(kw) ||
-                  channelName.includes(kw) ||
                   (stockMap[kw] && stockName.includes(stockMap[kw].toLowerCase()))
                 );
               });
@@ -2091,36 +2073,9 @@
         // 전체보기 상태로 초기화
         isViewingAll = true;
         
-        // 시트 목록과 종목 정보를 먼저 로드
         await getSheets();
-        stockMap = await loadStockData();
+        stockMap = await loadStockData();  // stockMap에 종목정보 할당
         
-        // DB와 HOT 데이터를 병렬로 로드
-        const [dbData, hotData] = await Promise.all([
-          loadDBData(),
-          loadHotData()
-        ]);
-
-        // DB 데이터 설정
-        if (dbData) {
-          currentDbData = dbData.map((row, index) => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: index
-          }));
-          currentDbData = assignGrade(currentDbData);
-        }
-
-        // HOT 데이터 설정
-        if (hotData) {
-          currentHotData = hotData.map((row, index) => ({
-            row,
-            score: calculateScore(row),
-            originalIndex: index
-          }));
-          currentHotData = assignGrade(currentHotData);
-        }
-
         // 종목코드 자동 치환 기능 추가
         document.getElementById("search-input").addEventListener("input", (e) => {
           const input = e.target.value.trim();
@@ -2150,9 +2105,8 @@
           }
         });
         
-        // 검색창 입력 이벤트 리스너
+        // 검색창 입력 이벤트 리스너 수정
         document.getElementById("search-input").addEventListener("input", (e) => {
-          suppressHighlight = false; // 직접 검색 시 하이라이트 복원
           const clearBtn = document.getElementById("clear-search");
           const input = e.target.value.trim();
           
@@ -2164,7 +2118,19 @@
             clearBtn.style.display = "none";
             isViewingAll = true;
             currentSearchKeyword = "";
-            clearSearch();
+            // 검색창이 비워졌을 때 전체보기 상태로 전환
+            loadDBData().then(data => {
+              if (data && data.length > 0) {
+                currentDbData = data.map((row, index) => ({
+                  row,
+                  score: calculateScore(row),
+                  originalIndex: index
+                }));
+                currentDbData = assignGrade(currentDbData);
+                renderNewsCards(currentDbData, "search-results-list");
+                updateSummary(currentDbData);
+              }
+            });
           }
         });
         
@@ -2174,100 +2140,40 @@
           document.getElementById("clear-search").style.display = "none";
           clearSearch();
         });
-
-        // 채널 드롭다운 이벤트 리스너
-        document.getElementById("channel-filter-dropdown").addEventListener("change", (e) => {
-          const selectedValue = e.target.value;
-          if (selectedValue === "all") {
-            suppressHighlight = false; // 전체보기 선택 시 하이라이트 복원
-            clearSearch();
-            e.target.value = ""; // 드롭다운 초기화
-          } else if (selectedValue) {
-            suppressHighlight = true; // 채널 선택 시 하이라이트 제거
-            document.getElementById("search-input").value = selectedValue;
-            handleSearch();
-          }
-        });
-
-        // 전체보기 버튼 이벤트 리스너
-        document.getElementById("show-all-button").addEventListener("click", () => {
-          suppressHighlight = false; // 전체보기 선택 시 하이라이트 복원
-          clearSearch();
-          document.getElementById("channel-filter-dropdown").value = ""; // 드롭다운 초기화
-        });
         
-        // URL 기반 초기화 및 렌더링
+        // [HOT/DB 분리] 초기화 순서 유지
+        const dbData = await loadDBData();
+        currentDbData = dbData.map((row, index) => ({
+          row,
+          score: calculateScore(row),
+          originalIndex: index
+        }));
+        // [HOT/DB 분리] DB 데이터에도 등급 할당
+        currentDbData = assignGrade(currentDbData);
+        
+        const hotData = await loadHotData();
+        if (hotData) {
+          currentHotData = hotData.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          
+          currentHotData = assignGrade(currentHotData);
+        }
+
         initializeFromURL();
         
-        // 주기적 업데이트 시작
-        startPeriodicUpdate();
+        // HOT 데이터 즉시 로딩 추가
+        await checkHotDataUpdate();
         
-        // 테마 및 레이아웃 설정
+        startPeriodicUpdate();
         setTheme('light');
         setLayout('hot');
 
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
       }
-    });
-
-    // 채널 드롭다운 업데이트 함수 수정
-    function updateChannelDropdown() {
-      const dropdown = document.getElementById("channel-filter-dropdown");
-      const channelsInResults = [...new Set((dbCache || [])
-        .map(row => row["채널명"])
-        .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b)))];
-
-      // 현재 선택된 값 저장
-      const currentValue = dropdown.value;
-
-      // 기존 옵션 초기화
-      dropdown.innerHTML = `
-        <option value="">채널선택</option>
-        <option value="all">🔄 전체보기</option>
-      `;
-
-      // 채널 옵션 추가
-      channelsInResults.forEach(channel => {
-        const option = document.createElement("option");
-        option.value = channel;
-        option.textContent = channel;
-        dropdown.appendChild(option);
-      });
-
-      // 이전에 선택된 값이 있다면 유지
-      if (currentValue && channelsInResults.includes(currentValue)) {
-        dropdown.value = currentValue;
-      }
-    }
-
-    // 드롭다운 이벤트 리스너 수정
-    document.addEventListener("DOMContentLoaded", async () => {
-      // ... existing DOMContentLoaded code ...
-
-      // 채널 드롭다운 이벤트 리스너 수정
-      document.getElementById("channel-filter-dropdown").addEventListener("change", (e) => {
-        const selectedValue = e.target.value;
-        if (selectedValue === "all") {
-          suppressHighlight = false; // 전체보기 선택 시 하이라이트 복원
-          clearSearch();
-          e.target.value = ""; // 드롭다운 초기화
-        } else if (selectedValue) {
-          suppressHighlight = true; // 채널 선택 시 하이라이트 제거
-          document.getElementById("search-input").value = selectedValue;
-          handleSearch();
-        }
-      });
-
-      // 전체보기 버튼 이벤트 리스너 수정
-      document.getElementById("show-all-button").addEventListener("click", () => {
-        suppressHighlight = false; // 전체보기 선택 시 하이라이트 복원
-        clearSearch();
-        document.getElementById("channel-filter-dropdown").value = ""; // 드롭다운 초기화
-      });
-
-      // ... rest of the existing code ...
     });
   </script>
 </body>
