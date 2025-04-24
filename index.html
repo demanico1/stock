@@ -1289,7 +1289,7 @@
 
           const channelDiv = document.createElement("div");
           channelDiv.className = "news-info";
-          channelDiv.textContent = `📡 ${channelName}`;
+          channelDiv.innerHTML = `📡 ${highlight(channelName, keywords)}`;
 
           const stockDiv = document.createElement("div");
           stockDiv.className = "news-info";
