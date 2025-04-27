@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="light" data-layout="hot">
+<html lang="ko" data-theme="light" data-layout="split">
 <head>
   <meta charset="UTF-8">
   <title>김성훈 주식 스카우터</title>
@@ -1425,10 +1425,7 @@
         setLayout('hot');
       }
       
-      // URL 쿼리 파라미터 업데이트
-      const url = new URL(window.location);
-      url.searchParams.set('filter', filter);
-      window.history.pushState({}, '', url);
+      // URL 변경 코드 제거
       
       // 버튼 활성화 상태 업데이트
       document.querySelectorAll('.filter-button').forEach(btn => {
@@ -1586,12 +1583,7 @@
       // 검색어 저장
       currentSearchKeyword = input;
 
-      // URL 업데이트 (초기 검색이 아닐 경우에만)
-      if (!initialSearch) {
-        const url = new URL(window.location);
-        url.searchParams.set('search', input);
-        window.history.pushState({}, '', url);
-      }
+      // URL 변경 코드 제거
 
       const searchButton = document.getElementById("search-button");
       const searchingText = document.getElementById("searching-text");
@@ -1689,46 +1681,6 @@
       document.getElementById("clear-search").style.display = "none";
       clearSearch();
     });
-
-    // URL에서 초기 상태를 확인하는 함수 수정
-    function initializeFromURL() {
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        // 레이아웃 상태 확인
-        const layoutParam = urlParams.get('layout');
-        if (layoutParam && ['hot', 'db', 'split'].includes(layoutParam)) {
-            setLayout(layoutParam);
-        }
-        
-        // 필터 상태 확인
-        const filterParam = urlParams.get('filter');
-        if (filterParam && ['all', 'top', 'mid', 'low'].includes(filterParam)) {
-            setFilter(filterParam);
-        }
-        
-        // 검색어 확인 및 전체보기 상태 설정
-        const searchParam = urlParams.get('search');
-        if (searchParam) {
-            document.getElementById("search-input").value = searchParam;
-            isViewingAll = false;
-            handleSearch(searchParam);
-        } else {
-            isViewingAll = true;
-            // 전체보기 상태일 때 초기 데이터 로드
-            loadDBData().then(data => {
-                if (data && data.length > 0) {
-                    currentDbData = data.map((row, index) => ({
-                        row,
-                        score: calculateScore(row),
-                        originalIndex: index
-                    }));
-                    currentDbData = assignGrade(currentDbData);
-                    renderNewsCards(currentDbData, "search-results-list");
-                    updateSummary(currentDbData);
-                }
-            });
-        }
-    }
 
     // 토스트 알림 표시 함수 수정 (빈 함수로 변경)
     function showToastNotification(message) {
@@ -1982,11 +1934,6 @@
     function setLayout(layout) {
       document.documentElement.setAttribute('data-layout', layout);
       
-      // URL 쿼리 파라미터 업데이트
-      const url = new URL(window.location);
-      url.searchParams.set('layout', layout);
-      window.history.pushState({}, '', url);
-      
       // 버튼 활성화 상태 업데이트
       document.querySelectorAll('.layout-controls button').forEach(btn => {
         btn.classList.remove('active');
@@ -2169,14 +2116,15 @@
           currentHotData = assignGrade(currentHotData);
         }
 
-        initializeFromURL();
+        // 기본 세팅 적용
+        setTheme('light');
+        setLayout('split');
+        setFilter('all');
         
         // HOT 데이터 즉시 로딩 추가
         await checkHotDataUpdate();
         
         startPeriodicUpdate();
-        setTheme('light');
-        setLayout('hot');
 
       } catch (error) {
         console.error("초기 데이터 로드 중 오류:", error);
