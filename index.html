@@ -2037,6 +2037,19 @@
         await getSheets();
         stockMap = await loadStockData();  // stockMap에 종목정보 할당
         
+        // DB 데이터 로드 및 전체 리스트 렌더링
+        const initialDbData = await loadDBData();
+        if (initialDbData && initialDbData.length > 0) {
+          currentDbData = initialDbData.map((row, index) => ({
+            row,
+            score: calculateScore(row),
+            originalIndex: index
+          }));
+          currentDbData = assignGrade(currentDbData);
+          renderNewsCards(currentDbData, "search-results-list");
+          updateSummary(currentDbData);
+        }
+        
         // 종목코드 자동 치환 기능 추가
         document.getElementById("search-input").addEventListener("input", (e) => {
           const input = e.target.value.trim();
