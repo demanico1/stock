@@ -2024,9 +2024,16 @@
     // 초기화 코드 통합 수정
     document.addEventListener("DOMContentLoaded", async () => {
       try {
-        // 전체보기 상태로 초기화
-        isViewingAll = true;
+        // URL 쿼리스트링 제거
+        history.replaceState({}, '', location.pathname);
         
+        // 검색창 초기화 및 전체보기 상태 설정
+        const searchInput = document.getElementById("search-input");
+        searchInput.value = "";
+        isViewingAll = true;
+        currentSearchKeyword = "";
+        
+        // 전체보기 상태로 초기화
         await getSheets();
         stockMap = await loadStockData();  // stockMap에 종목정보 할당
         
