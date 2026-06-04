@@ -8,6 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 const SPREADSHEET_ID = "1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4";
+const BASE_URL = "https://stock-ja4e.onrender.com";
 
 // ✅ Google Auth 공통 함수
 async function getAuthClient() {
@@ -37,7 +38,7 @@ async function getLiveSheetData(gid) {
     .filter(row => row["뉴스 제목"] || row["대표 뉴스 제목"]);
 }
 
-// ✅ CSV export로 데이터 가져오기 (캐시 있음)
+// ✅ CSV export로 데이터 가져오기 (캐시 있음 - 웹페이지용)
 async function getCsvSheetData(gid) {
   const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
   const response = await fetch(url);
@@ -157,6 +158,7 @@ app.get("/", (req, res) => {
 // 기존 엔드포인트
 // ===================================
 
+// 시트 목록 조회
 app.get("/sheets", async (req, res) => {
   try {
     const client = await getAuthClient();
@@ -170,10 +172,11 @@ app.get("/sheets", async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error("시트 목록 불러오기 실패:", error.message);
-    res.status(500).send("시트 불러오기 실패");
+    res.status(500).json({ error: error.message });
   }
 });
 
+// 특정 시트 조회 (CSV 캐시 방식 - 웹페이지용)
 app.get("/sheet/:gid", async (req, res) => {
   try {
     const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${req.params.gid}`;
@@ -183,17 +186,18 @@ app.get("/sheet/:gid", async (req, res) => {
     res.json(parsed.data);
   } catch (error) {
     console.error("시트 데이터 가져오기 실패:", error.message);
-    res.status(500).send("시트 데이터 가져오기 실패");
+    res.status(500).json({ error: error.message });
   }
 });
 
+// ✅ /today — live URL 반환 (핵심 수정!)
 app.get("/today", async (req, res) => {
   try {
     const { hotSheet, dbSheet, datePatternWithDay } = await getTodaySheets();
     res.json({
       date: datePatternWithDay,
-      hot: hotSheet ? `https://stock-ja4e.onrender.com/sheet/${hotSheet.gid}` : null,
-      db: dbSheet ? `https://stock-ja4e.onrender.com/sheet/${dbSheet.gid}` : null,
+      hot: hotSheet ? `${BASE_URL}/live/${hotSheet.gid}` : null,
+      db: dbSheet ? `${BASE_URL}/live/${dbSheet.gid}` : null,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -201,7 +205,7 @@ app.get("/today", async (req, res) => {
 });
 
 // ===================================
-// 캐시 버전 엔드포인트
+// 캐시 버전 엔드포인트 (웹페이지용)
 // ===================================
 
 app.get("/count/:gid", async (req, res) => {
@@ -329,8 +333,8 @@ app.get("/hot-keywords/:gid", async (req, res) => {
 });
 
 // ===================================
-// 실시간(Live) 엔드포인트 - 순서 중요!
-// /live/:gid 보다 구체적인 경로가 먼저!
+// 실시간(Live) 엔드포인트
+// 순서 중요! /live/:gid 는 맨 마지막!
 // ===================================
 
 app.get("/live/today", async (req, res) => {
@@ -338,8 +342,8 @@ app.get("/live/today", async (req, res) => {
     const { hotSheet, dbSheet, datePatternWithDay } = await getTodaySheets();
     res.json({
       date: datePatternWithDay,
-      hot: hotSheet ? { gid: hotSheet.gid, url: `https://stock-ja4e.onrender.com/live/${hotSheet.gid}` } : null,
-      db: dbSheet ? { gid: dbSheet.gid, url: `https://stock-ja4e.onrender.com/live/${dbSheet.gid}` } : null,
+      hot: hotSheet ? { gid: hotSheet.gid, url: `${BASE_URL}/live/${hotSheet.gid}` } : null,
+      db: dbSheet ? { gid: dbSheet.gid, url: `${BASE_URL}/live/${dbSheet.gid}` } : null,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -404,6 +408,23 @@ app.get("/live/timeline/:gid", async (req, res) => {
   }
 });
 
+app.get("/live/channels/:gid", async (req, res) => {
+  try {
+    const data = await getLiveSheetData(req.params.gid);
+    const channels = {};
+    data.forEach(row => {
+      const ch = row["채널명"] || "";
+      if (ch) channels[ch] = (channels[ch] || 0) + 1;
+    });
+    const result = Object.entries(channels)
+      .sort((a, b) => b[1] - a[1])
+      .map(([channel, count]) => ({ channel, count }));
+    res.json({ total: data.length, channels: result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/live/stocks/:gid", async (req, res) => {
   try {
     const data = await getLiveSheetData(req.params.gid);
@@ -421,23 +442,6 @@ app.get("/live/stocks/:gid", async (req, res) => {
       .sort((a, b) => b[1] - a[1])
       .map(([stock, count]) => ({ stock, count }));
     res.json({ total: data.length, stocks: result });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.get("/live/channels/:gid", async (req, res) => {
-  try {
-    const data = await getLiveSheetData(req.params.gid);
-    const channels = {};
-    data.forEach(row => {
-      const ch = row["채널명"] || "";
-      if (ch) channels[ch] = (channels[ch] || 0) + 1;
-    });
-    const result = Object.entries(channels)
-      .sort((a, b) => b[1] - a[1])
-      .map(([channel, count]) => ({ channel, count }));
-    res.json({ total: data.length, channels: result });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
