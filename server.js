@@ -190,7 +190,7 @@ app.get("/sheet/:gid", async (req, res) => {
   }
 });
 
-// ✅ /today — live URL 반환 (핵심 수정!)
+// ✅ /today — live URL 반환 (핵심!)
 app.get("/today", async (req, res) => {
   try {
     const { hotSheet, dbSheet, datePatternWithDay } = await getTodaySheets();
