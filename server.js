@@ -4,12 +4,11 @@ const path = require("path");
 const { google } = require("googleapis");
 const Papa = require("papaparse");
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
 const app = express();
 const PORT = process.env.PORT || 10000;
 
 // ✅ 정적 파일 제공 (favicon.png 포함)
-app.use(express.static(path.join(__dirname)));  // 여기가 핵심!
+app.use(express.static(path.join(__dirname)));
 
 // 루트: index.html 제공
 app.get("/", (req, res) => {
@@ -33,7 +32,6 @@ app.get("/sheets", async (req, res) => {
     });
     const client = await auth.getClient();
     const sheets = google.sheets({ version: "v4", auth: client });
-
     const spreadsheetId = "1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4";
     const meta = await sheets.spreadsheets.get({ spreadsheetId });
     const result = meta.data.sheets.map((s) => ({
@@ -48,16 +46,57 @@ app.get("/sheets", async (req, res) => {
   }
 });
 
+// ✅ 오늘 날짜 시트 URL 자동 반환
+app.get("/today", async (req, res) => {
+  try {
+    const auth = new google.auth.GoogleAuth({
+      credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
+      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+    });
+    const client = await auth.getClient();
+    const sheets = google.sheets({ version: "v4", auth: client });
+    const spreadsheetId = "1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4";
+    const meta = await sheets.spreadsheets.get({ spreadsheetId });
+
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const date = String(today.getDate()).padStart(2, '0');
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+    const weekday = weekdays[today.getDay()];
+    const datePattern = `${month}.${date}`;
+    const datePatternWithDay = `${month}.${date}(${weekday})`;
+
+    const allSheets = meta.data.sheets.map(s => ({
+      name: s.properties.title,
+      gid: s.properties.sheetId,
+    }));
+
+    const hotSheet = allSheets.find(s =>
+      s.name.toLowerCase().includes('hot') && s.name.includes(datePatternWithDay)
+    );
+    const dbSheet = allSheets.find(s =>
+      s.name.toLowerCase().includes('db') && s.name.includes(datePattern)
+    );
+
+    res.json({
+      date: datePatternWithDay,
+      hot: hotSheet ? `https://stock-ja4e.onrender.com/sheet/${hotSheet.gid}` : null,
+      db: dbSheet ? `https://stock-ja4e.onrender.com/sheet/${dbSheet.gid}` : null,
+    });
+  } catch (error) {
+    console.error("오늘 시트 조회 실패:", error.message);
+    res.status(500).send("오늘 시트 조회 실패");
+  }
+});
+
 // 특정 시트 조회
 app.get("/sheet/:gid", async (req, res) => {
   try {
     const gid = req.params.gid;
     const url = `https://docs.google.com/spreadsheets/d/1e03ZfswiWVtWoyyPK_RzmNi4orNWtp0Mdy_Ol0iwma4/export?format=csv&gid=${gid}`;
-
     const response = await fetch(url);
     const csv = await response.text();
     const parsed = Papa.parse(csv, { header: true });
-
     res.json(parsed.data);
   } catch (error) {
     console.error("시트 데이터 가져오기 실패:", error.message);
