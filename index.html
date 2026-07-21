@@ -621,14 +621,21 @@
       right: 0;
       z-index: 1001;
       background: var(--card-bg);
-      padding: 8px;
+      padding: 8px 16px;
       display: flex;
-      flex-direction: column;
-      gap: 8px;
+      flex-direction: row;      /* ★ 세로 → 가로 한 줄 */
+      flex-wrap: wrap;          /* ★ 좁으면 자동 줄바꿈 (모바일 안전) */
+      align-items: center;
+      gap: 8px 16px;
       border-bottom: 1px solid var(--border-color);
       box-shadow: var(--card-shadow);
       height: auto;
       width: 100%;
+    }
+
+    /* ★ 날짜 그룹을 맨 우측으로 밀기 */
+    .date-group {
+      margin-left: auto;
     }
 
     .layout-buttons {
@@ -856,19 +863,6 @@
       </button>
     </div>
 
-    <!-- ★ 날짜 선택 (추가됨) -->
-    <div class="filter-buttons" style="margin-bottom:6px;">
-      <span class="filter-label">날짜</span>
-      <select id="date-select" onchange="onDateChange(this.value)"
-              style="height:32px; padding:4px 12px; border-radius:16px;
-                     background:var(--card-bg); color:var(--text-color);
-                     border:1px solid var(--border-color); font-size:12px; cursor:pointer;">
-      </select>
-      <span id="past-badge" style="display:none; font-size:11px; color:#d9534f; font-weight:bold;">
-        과거 데이터 (자동갱신 중지)
-      </span>
-    </div>
-
     <!-- 필터 영역 -->
     <div class="filter-area">
       <div class="filter-buttons">
@@ -886,6 +880,19 @@
           <span>보통</span>
         </button>
       </div>
+    </div>
+
+    <!-- ★ 날짜 선택 (맨 우측 배치) -->
+    <div class="filter-buttons date-group">
+      <span class="filter-label">날짜</span>
+      <select id="date-select" onchange="onDateChange(this.value)"
+              style="height:32px; padding:4px 12px; border-radius:16px;
+                     background:var(--card-bg); color:var(--text-color);
+                     border:1px solid var(--border-color); font-size:12px; cursor:pointer;">
+      </select>
+      <span id="past-badge" style="display:none; font-size:11px; color:#d9534f; font-weight:bold;">
+        과거 데이터 (자동갱신 중지)
+      </span>
     </div>
   </div>
 
@@ -1499,13 +1506,13 @@
           timeDiv.className = "news-info";
           timeDiv.textContent = `🕒 ${timeDisplay}`;
 
+          // ★ 채널명 + 종목명을 한 줄로 (종목 있으면 우측에 붙임 → HOT 카드와 높이 맞춤)
           const channelDiv = document.createElement("div");
           channelDiv.className = "news-info";
-          channelDiv.innerHTML = `📡 ${highlight(channelName, keywords)}`;
-
-          const stockDiv = document.createElement("div");
-          stockDiv.className = "news-info";
-          stockDiv.textContent = `🏢 ${stockName}`;
+          const stockText = (stockName && stockName !== "-")
+            ? `　🏢 ${highlight(stockName, keywords)}`
+            : "";
+          channelDiv.innerHTML = `📡 ${highlight(channelName, keywords)}${stockText}`;
 
           const linkDiv = document.createElement("div");
           linkDiv.className = "news-link";
@@ -1533,7 +1540,6 @@
           card.appendChild(titleDiv);
           card.appendChild(timeDiv);
           card.appendChild(channelDiv);
-          card.appendChild(stockDiv);
           card.appendChild(linkDiv);
 
           fragment.appendChild(card);
