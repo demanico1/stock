@@ -185,11 +185,12 @@
       display: flex;
       gap: 8px;
       align-items: center;
+      flex-wrap: wrap;      /* ★ 좁은 화면에서 줄바꿈 */
     }
 
     .search-input-wrapper {
       position: relative;
-      flex: 1;
+      flex: 1 1 150px;      /* ★ 줄바꿈 시 최소 너비 확보 */
       min-width: 0;
       display: flex;
       align-items: center;
@@ -324,16 +325,16 @@
       to { opacity: 1; transform: scale(1); }
     }
 
-    .news-card.top { 
-      background: var(--top-card-bg); 
+    .news-card.top {
+      background: var(--top-card-bg);
     }
 
-    .news-card.mid { 
-      background: var(--mid-card-bg); 
+    .news-card.mid {
+      background: var(--mid-card-bg);
     }
 
-    .news-card.low { 
-      background: var(--low-card-bg); 
+    .news-card.low {
+      background: var(--low-card-bg);
     }
 
     .news-title {
@@ -656,10 +657,10 @@
     /* 레이아웃 설정 */
     [data-layout="hot"] .right-panel { display: none; }
     [data-layout="hot"] .left-panel { width: 100%; padding: 0; }
-    
+
     [data-layout="db"] .left-panel { display: none; }
     [data-layout="db"] .right-panel { width: 100%; padding: 0; }
-    
+
     [data-layout="split"] .left-panel,
     [data-layout="split"] .right-panel {
       width: 50%;
@@ -794,6 +795,43 @@
       }
     }
 
+    /* ★ 채널 필터 드롭다운 */
+    #channel-select {
+      height: 34px;
+      max-width: 170px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    #channel-select.filtered {
+      border-color: #d9534f;
+      color: #d9534f;
+      font-weight: bold;
+    }
+
+    /* ★ 검색 결과 제목 옆 인라인 요약 (기존 요약박스 대체) */
+    #summary-inline {
+      font-size: 11px;
+      font-weight: normal;
+      color: var(--text-secondary);
+      margin-left: 6px;
+      white-space: nowrap;
+    }
+
+    /* ★ PC에서만 좌우 패널 독립 스크롤 (모바일은 기존 그대로) */
+    @media (min-width: 769px) {
+      .left-panel,
+      .right-panel {
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+      }
+    }
+
     /* 토스트 알림 스타일 제거 */
     .toast-notification {
       display: none;  /* 토스트 알림 숨김 처리 */
@@ -816,6 +854,19 @@
       <button onclick="toggleTheme()" class="theme-toggle">
         <span class="icon">🌓</span>
       </button>
+    </div>
+
+    <!-- ★ 날짜 선택 (추가됨) -->
+    <div class="filter-buttons" style="margin-bottom:6px;">
+      <span class="filter-label">날짜</span>
+      <select id="date-select" onchange="onDateChange(this.value)"
+              style="height:32px; padding:4px 12px; border-radius:16px;
+                     background:var(--card-bg); color:var(--text-color);
+                     border:1px solid var(--border-color); font-size:12px; cursor:pointer;">
+      </select>
+      <span id="past-badge" style="display:none; font-size:11px; color:#d9534f; font-weight:bold;">
+        과거 데이터 (자동갱신 중지)
+      </span>
     </div>
 
     <!-- 필터 영역 -->
@@ -877,33 +928,30 @@
 
     <!-- 오른쪽: DB 검색 -->
     <div class="right-panel">
+      <!-- ★ 검색창 + 전체보기 + 채널필터를 한 줄로 통합 (제목 제거로 공간 절약) -->
       <div class="search-area">
-        <h3>🔍 DB 검색</h3>
         <div class="search-form">
           <div class="search-input-wrapper">
-            <input type="text" placeholder="검색어를 입력하세요" id="search-input">
+            <input type="text" placeholder="🔍 검색어를 입력하세요" id="search-input">
             <button id="clear-search" class="clear-search" style="display: none;">❌</button>
           </div>
           <button id="search-button">검색</button>
+          <button id="show-all-button" style="font-size: 12px;">전체보기</button>
+          <select id="channel-select" onchange="onChannelChange(this.value)" title="채널 필터">
+            <option value="">전체 채널</option>
+          </select>
         </div>
-        <div id="naver-news-link" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px 0;"></div>
-        <button id="show-all-button" style="font-size: 12px; margin-top: 8px;">전체보기</button>
+        <div id="naver-news-link" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 0 0;"></div>
       </div>
 
       <div id="searching-text" class="spinner-blink" style="display:none;">
         🔍 검색 중이에요!
       </div>
 
-      <!-- 검색 결과 요약 박스 수정 -->
-      <div id="summary" class="summary-box" style="display: none;">
-        <div><strong>최신:</strong><span id="latest-time">-</span></div>
-        <div><strong>최초:</strong><span id="earliest-time">-</span></div>
-        <div><strong>채널 수:</strong><span id="channel-count">-</span></div>
-        <div><strong>뉴스 수:</strong><span id="news-count">-</span></div>
-      </div>
+      <!-- ★ 기존 요약박스(150px) 제거 → 아래 제목 옆 인라인으로 흡수 -->
 
       <div class="search-results">
-        <h3>📑 검색 결과</h3>
+        <h3>📑 검색 결과 <span id="summary-inline"></span></h3>
         <div class="news-list" id="search-results-list">
           <!-- 검색 결과가 여기에 표시됩니다 -->
         </div>
@@ -920,6 +968,8 @@
     let hotDataCache = null;
     let lastHotUpdate = null;
     let currentFilter = 'all';
+    let selectedDate = null;      // ★ 추가: null = 오늘, "06.22(월)" 형식
+    let selectedChannel = '';     // ★ 추가: '' = 전체 채널
     let isViewingAll = true;
     let currentSearchKeyword = "";
     const DB_UPDATE_INTERVAL = 300000; // 5분
@@ -965,13 +1015,13 @@
 
       async processQueue() {
         if (this.isProcessing || this.queue.length === 0) return;
-        
+
         this.isProcessing = true;
         const now = Date.now();
         const timeSinceLastRequest = now - this.lastRequestTime;
-        
+
         if (timeSinceLastRequest < this.MIN_REQUEST_INTERVAL) {
-          await new Promise(resolve => 
+          await new Promise(resolve =>
             setTimeout(resolve, this.MIN_REQUEST_INTERVAL - timeSinceLastRequest)
           );
         }
@@ -1000,7 +1050,7 @@
         } catch (error) {
           lastError = error;
           if (error.message.includes('Quota exceeded')) {
-            await new Promise(resolve => 
+            await new Promise(resolve =>
               setTimeout(resolve, Math.pow(2, i) * 1000)
             );
           }
@@ -1009,15 +1059,178 @@
       throw lastError;
     }
 
+    // ★★★ 날짜 선택 기능 (추가됨) ★★★
+    function todayDatePattern() {
+      const t = new Date();
+      const m = String(t.getMonth() + 1).padStart(2, '0');
+      const d = String(t.getDate()).padStart(2, '0');
+      const w = ['일','월','화','수','목','금','토'][t.getDay()];
+      return `${m}.${d}(${w})`;
+    }
+
+    function getTargetDatePattern() {
+      return selectedDate || todayDatePattern();
+    }
+
+    function isViewingToday() {
+      return !selectedDate || selectedDate === todayDatePattern();
+    }
+
+    // 드롭다운 채우기 (/sheets 캐시 재활용 → 추가 서버 요청 없음)
+    async function populateDateSelector() {
+      const sheets = await getSheets();
+      if (!sheets) return;
+
+      const re = /^(\d{2}\.\d{2}\([월화수목금토일]\))\s+(HOT|DB|이슈|채널)$/;
+      const dates = [...new Set(
+        sheets.map(s => (s.name.match(re) || [])[1]).filter(Boolean)
+      )].sort().reverse();          // 최신 날짜 우선
+
+      const sel = document.getElementById('date-select');
+      const today = todayDatePattern();
+      sel.innerHTML = '';
+      dates.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = (d === today) ? `${d} · 오늘` : d;
+        sel.appendChild(opt);
+      });
+      sel.value = selectedDate || today;
+      document.getElementById('past-badge').style.display =
+        isViewingToday() ? 'none' : 'inline';
+    }
+
+    // 날짜 변경 시 HOT + DB 전체 리로드
+    async function onDateChange(value) {
+      selectedDate = (value === todayDatePattern()) ? null : value;
+
+      // 캐시 초기화
+      dbCache = null;  lastDBUpdate = null;
+      hotDataCache = null;  lastHotUpdate = null;
+
+      // 검색 상태 초기화
+      document.getElementById('search-input').value = '';
+      document.getElementById('clear-search').style.display = 'none';
+      currentSearchKeyword = '';
+      isViewingAll = true;
+
+      document.getElementById('past-badge').style.display =
+        isViewingToday() ? 'none' : 'inline';
+
+      // 로딩 표시
+      document.getElementById('hot-news-list').innerHTML =
+        '<div class="loading-spinner"><span>불러오는 중</span>' +
+        '<div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+
+      try {
+        const dbData = await loadDBData(true);
+        if (dbData && dbData.length) {
+          currentDbData = dbData.map((row, i) => ({
+            row, score: calculateScore(row), originalIndex: i
+          }));
+          currentDbData = assignGrade(currentDbData);
+          populateChannelSelector();   // ★ 채널 목록 갱신
+          renderDbResults();           // ★ 채널필터 적용 렌더링
+        } else {
+          currentDbData = [];
+          dbCache = [];
+          selectedChannel = '';
+          populateChannelSelector();
+          renderDbResults();
+        }
+      } catch (e) {
+        console.log('DB 로드 실패:', e.message);
+        currentDbData = [];
+        dbCache = [];
+        selectedChannel = '';
+        populateChannelSelector();
+        renderDbResults();
+      }
+
+      await checkHotDataUpdate();
+    }
+    // ★★★ 날짜 선택 기능 끝 ★★★
+
+
+    // ★★★ 채널 필터 기능 (추가됨) ★★★
+
+    // 시간 문자열 → "HH:MM" 축약
+    function shortTime(t) {
+      if (!t) return '';
+      const m = String(t).match(/(\d{2}):(\d{2})/);
+      return m ? `${m[1]}:${m[2]}` : '';
+    }
+
+    // 선택된 채널로 걸러내기
+    function getChannelFiltered(items) {
+      if (!selectedChannel) return items;
+      return items.filter(it => (it.row["채널명"] || "").trim() === selectedChannel);
+    }
+
+    // DB 검색결과 렌더링 통합 (채널필터 + 요약 갱신을 항상 함께 처리)
+    function renderDbResults(keywords = []) {
+      const shown = getChannelFiltered(currentDbData || []);
+      renderNewsCards(shown, "search-results-list", keywords);
+      updateSummary(shown);
+    }
+
+    // 채널 드롭다운 채우기 (원본 dbCache 기준, 건수 많은 순)
+    function populateChannelSelector() {
+      const sel = document.getElementById('channel-select');
+      if (!sel) return;
+
+      const raw = dbCache || [];
+      const counts = {};
+      raw.forEach(r => {
+        const ch = (r["채널명"] || "").trim();
+        if (ch) counts[ch] = (counts[ch] || 0) + 1;
+      });
+
+      const list = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const prev = selectedChannel;
+
+      sel.innerHTML = '';
+      const optAll = document.createElement('option');
+      optAll.value = '';
+      optAll.textContent = `전체 채널 (${raw.length})`;
+      sel.appendChild(optAll);
+
+      list.forEach(([ch, cnt]) => {
+        const o = document.createElement('option');
+        o.value = ch;
+        o.textContent = `${ch} (${cnt})`;
+        sel.appendChild(o);
+      });
+
+      // 날짜 바뀌어도 같은 채널이 있으면 선택 유지
+      if (prev && counts[prev]) {
+        sel.value = prev;
+      } else {
+        selectedChannel = '';
+        sel.value = '';
+      }
+      sel.classList.toggle('filtered', !!selectedChannel);
+    }
+
+    // 채널 변경 (검색어와 AND 조건으로 동작)
+    function onChannelChange(value) {
+      selectedChannel = value || '';
+      const sel = document.getElementById('channel-select');
+      if (sel) sel.classList.toggle('filtered', !!selectedChannel);
+
+      renderDbResults(currentSearchKeyword ? currentSearchKeyword.split(" ") : []);
+    }
+    // ★★★ 채널 필터 기능 끝 ★★★
+
     // 점수 계산
     function calculateScore(row) {
       const newsCount = Math.min(parseInt(row["관련뉴스 수"] || "0"), 10);
       const channelCount = parseInt(row["언급 채널 수"] || "0");
       let score = newsCount;
-      
+
       score += channelCount * 3;
       if (channelCount >= 5) score += 2;
-      
+
       return score;
     }
 
@@ -1025,7 +1238,7 @@
     function assignGrade(rowsWithScore) {
       // 1. 점수 내림차순 정렬
       const sorted = [...rowsWithScore].sort((a, b) => b.score - a.score);
-      
+
       // 2. 고유 점수 분포 리스트 생성
       const uniqueScores = [...new Set(sorted.map(item => item.score))];
       const scoreGroups = uniqueScores.map(score => ({
@@ -1048,7 +1261,7 @@
           currentRank <= topEnd ? 'top' :
           currentRank <= midEnd ? 'mid' :
           currentRank <= lowEnd ? 'low' : '';
-        
+
         for (const item of group.items) {
           gradeMap.set(item, grade);
         }
@@ -1068,7 +1281,7 @@
     async function getSheets() {
       const today = new Date();
       const currentDate = `${today.getMonth() + 1}.${today.getDate()}`;
-      
+
       // 캐시가 있고, 같은 날짜면 캐시 사용
       if (sheetsCache.data && sheetsCache.currentDate === currentDate) {
         console.log('시트 목록 캐시 사용');
@@ -1081,16 +1294,16 @@
         if (!response.ok) {
           throw new Error('시트 목록 조회 실패');
         }
-        
+
         const sheets = await response.json();
-        
+
         // 캐시 업데이트
         sheetsCache = {
           data: sheets,
           lastUpdate: Date.now(),
           currentDate: currentDate
         };
-        
+
         return sheets;
       } catch (error) {
         console.error('시트 목록 로드 실패:', error);
@@ -1106,19 +1319,18 @@
         if (!sheets) {
           throw new Error('시트 목록을 가져올 수 없습니다.');
         }
-        
-        const today = new Date();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const date = String(today.getDate()).padStart(2, '0');
-        
+
+        // ★ 수정: 오늘 고정 → 선택된 날짜 기준
+        const dateOnly = getTargetDatePattern().split('(')[0];   // "06.22"
+
         const dbSheet = sheets.find(s => {
           const sheetName = s.name.toLowerCase();
-          return sheetName.includes('db') && 
-                 sheetName.includes(`${month}.${date}`);
+          return sheetName.includes('db') &&
+                 sheetName.includes(dateOnly);
         });
 
         if (!dbSheet) {
-          throw new Error(`${month}.${date} DB 시트를 찾을 수 없습니다.`);
+          throw new Error(`${dateOnly} DB 시트를 찾을 수 없습니다.`);
         }
 
         console.log('DB 시트 찾음:', dbSheet.name);
@@ -1139,14 +1351,14 @@
       try {
         const dbSheet = await findDbSheet();
         const response = await fetch(`/sheet/${dbSheet.gid}`);
-        
+
         if (!response.ok) {
           throw new Error(`API 오류: ${response.status}`);
         }
-        
+
         dbCache = await response.json();
         lastDBUpdate = Date.now();
-        
+
         console.log('DB 데이터 로드 완료:', dbCache?.length || 0, '건');
         return dbCache;
       } catch (error) {
@@ -1173,7 +1385,7 @@
         const title = item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "";
         const time = item.row["시간"] || item.row["최신 뉴스 시간"] || "";
         const key = `${title}_${time}`;
-        
+
         if (seen.has(key)) {
           return false;
         }
@@ -1216,10 +1428,10 @@
       if (targetElement === 'hot-news-list' && (!uniqueData || uniqueData.length === 0)) {
         const loadingElement = document.getElementById('hot-news-loading');
         const skeletonElement = document.getElementById('hot-news-skeleton');
-        
+
         if (loadingElement) loadingElement.style.display = 'none';
         if (skeletonElement) skeletonElement.style.display = 'none';
-        
+
         const emptyMessage = document.createElement('div');
         emptyMessage.style.textAlign = 'center';
         emptyMessage.style.padding = '20px';
@@ -1248,14 +1460,14 @@
         uniqueData.forEach(item => {
           const card = document.createElement("div");
           card.className = "news-card";
-          
+
           // NEW 배지 추가 (새로운 뉴스인 경우에만)
           if (item.isNew) {
             const badge = document.createElement('span');
             badge.className = 'new-badge';
             badge.textContent = 'NEW';
             card.appendChild(badge);
-            
+
             // 1분 후 배지 제거
             setTimeout(() => {
               if (badge.parentNode === card) {
@@ -1263,19 +1475,19 @@
               }
             }, 60000);
           }
-          
+
           const title = item.row["뉴스 제목"] || "";
           const time = item.row["시간"] || "";
           const channelName = item.row["채널명"] || "";
           const stockName = item.row["종목명"] || "";
           const link = item.row["링크"] || "";
-          
+
           const timeDisplay = parseTime(time);
           const safeLink = !link || link.includes("stockinfo7.com")
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
             : link;
 
-          const highlightedTitle = keywords.length 
+          const highlightedTitle = keywords.length
             ? highlight(title, keywords)
             : title;
 
@@ -1329,10 +1541,10 @@
       } else {
         const loadingElement = document.getElementById('hot-news-loading');
         const skeletonElement = document.getElementById('hot-news-skeleton');
-        
+
         if (loadingElement) loadingElement.style.display = 'none';
         if (skeletonElement) skeletonElement.style.display = 'none';
-        
+
         list.innerHTML = '';
 
         if (!uniqueData.length) {
@@ -1349,19 +1561,19 @@
         uniqueData.forEach(item => {
           const card = document.createElement("div");
           card.className = `news-card ${item.grade || ""}`;
-          
+
           const title = item.row["대표 뉴스 제목"] || item.row["뉴스 제목"] || "";
           const latestTime = item.row["최신 뉴스 시간"] || item.row["시간"] || "";
           const firstTime = item.row["최초 뉴스 시간"] || "";
           const newsCount = item.row["관련뉴스 수"] || "0";
           const channelCount = item.row["언급 채널 수"] || "0";
           const link = item.row["최신 뉴스 링크"] || item.row["링크"] || "";
-          
+
           const safeLink = !link || link.includes("stockinfo7.com")
             ? `https://search.naver.com/search.naver?query=${encodeURIComponent(title)}`
             : link;
 
-          const highlightedTitle = keywords.length 
+          const highlightedTitle = keywords.length
             ? highlight(title, keywords)
             : title;
 
@@ -1418,15 +1630,15 @@
     // 필터 설정 함수 수정
     function setFilter(filter) {
       currentFilter = filter;
-      
+
       // 현재 레이아웃이 'db'인 경우 'hot' 레이아웃으로 자동 전환
       const currentLayout = document.documentElement.getAttribute('data-layout');
       if (currentLayout === 'db') {
         setLayout('hot');
       }
-      
+
       // URL 변경 코드 제거
-      
+
       // 버튼 활성화 상태 업데이트
       document.querySelectorAll('.filter-button').forEach(btn => {
         btn.classList.remove('active');
@@ -1434,13 +1646,13 @@
           btn.classList.add('active');
         }
       });
-      
+
       // 무조건 최상단으로 스크롤
       window.scrollTo({
         top: 0,
         behavior: 'smooth'
       });
-      
+
       // [HOT/DB 분리] 필터는 HOT 뉴스 영역(currentHotData)에만 적용됩니다
       // DB 검색 영역은 필터링 대상이 아닙니다
       renderFilteredData(currentHotData);
@@ -1450,7 +1662,7 @@
     function initializeFilterFromURL() {
         const urlParams = new URLSearchParams(window.location.search);
         const filterParam = urlParams.get('filter');
-        
+
         if (filterParam && ['all', 'top', 'mid', 'low'].includes(filterParam)) {
             setFilter(filterParam);
         }
@@ -1469,7 +1681,7 @@
         const filtered = data
             .filter(item => item.grade === currentFilter)
             .sort((a, b) => b.score - a.score);
-        
+
         renderNewsCards(filtered, "hot-news-list");
     }
 
@@ -1495,44 +1707,39 @@
       }
     }
 
-    // 검색 결과 요약 업데이트 함수 수정
+    // ★ 수정: 요약박스(4줄) → 검색결과 제목 옆 인라인 한 줄
     function updateSummary(matches) {
+      const el = document.getElementById("summary-inline");
+      if (!el) return;
+
+      if (!matches || !matches.length) {
+        el.textContent = '';
+        return;
+      }
+
       const times = [];
       const channels = new Set();
-
-      // 뉴스에서 시간 및 채널 수를 수집
       matches.forEach(m => {
         try {
           const time = m.row["시간"];
-          if (time) {
-            times.push(time);
-          }
+          if (time) times.push(time);
           const channel = m.row["채널명"];
-          if (channel) {
-            channels.add(channel);
-          }
+          if (channel) channels.add(channel);
         } catch (e) {
           console.log("요약 계산 중 오류 발생", e);
         }
       });
 
-      // 요약 박스 표시
-      const summaryBox = document.getElementById("summary");
-      summaryBox.style.display = matches.length > 0 ? "block" : "none";
-
-      // 시간 정보 업데이트
+      let range = '';
       if (times.length) {
         times.sort();
-        document.getElementById("latest-time").textContent = parseTime(times[times.length - 1]);
-        document.getElementById("earliest-time").textContent = parseTime(times[0]);
-      } else {
-        document.getElementById("latest-time").textContent = "-";
-        document.getElementById("earliest-time").textContent = "-";
+        const first = shortTime(times[0]);
+        const last = shortTime(times[times.length - 1]);
+        if (first && last) range = ` · ${first}~${last}`;
       }
 
-      // 채널 수와 뉴스 수 업데이트
-      document.getElementById("channel-count").textContent = `${channels.size}건`;
-      document.getElementById("news-count").textContent = `${matches.length}건`;
+      const chText = selectedChannel ? `채널 「${selectedChannel}」` : `채널 ${channels.size}개`;
+      el.textContent = `${matches.length}건 · ${chText}${range}`;
     }
 
     // 종목코드 확인 함수
@@ -1554,11 +1761,11 @@
       const clearButton = document.getElementById("clear-search");
       searchInput.value = "";
       clearButton.style.display = "none";
-      
+
       // 전체보기 상태로 명확히 설정
       isViewingAll = true;
       currentSearchKeyword = "";
-      
+
       // 전체보기 상태로 전환
       loadDBData().then(data => {
         if (data && data.length > 0) {
@@ -1568,8 +1775,8 @@
             originalIndex: index
           }));
           currentDbData = assignGrade(currentDbData);
-          renderNewsCards(currentDbData, "search-results-list");
-          updateSummary(currentDbData);
+          populateChannelSelector();   // ★ 채널 목록 갱신
+          renderDbResults();           // ★ 채널필터 적용 렌더링
         }
       });
     }
@@ -1587,7 +1794,7 @@
 
       const searchButton = document.getElementById("search-button");
       const searchingText = document.getElementById("searching-text");
-      
+
       searchButton.disabled = true;
       searchButton.textContent = "검색 중...";
       searchingText.style.display = "block";
@@ -1598,8 +1805,8 @@
       const rawSearchQuery = input.trim();
       const fullQuery = `${rawSearchQuery} 관련주 | 테마주`;
       naverNewsLink.innerHTML = `
-        🔗 <a href="https://search.naver.com/search.naver?query=${encodeURIComponent(fullQuery)}&where=news" 
-             target="_blank" 
+        🔗 <a href="https://search.naver.com/search.naver?query=${encodeURIComponent(fullQuery)}&where=news"
+             target="_blank"
              style="color: var(--text-secondary); text-decoration: none;">
           (${rawSearchQuery}) 관련주
         </a>
@@ -1618,12 +1825,12 @@
             const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
             const stockName = (row["종목명"] || "").toLowerCase();
             const channelName = (row["채널명"] || "").toLowerCase();
-            
+
             // 모든 검색어가 제목이나 종목명이나 채널명에 포함되어야 함 (AND 조건)
             return searchTerms.every(k => {
               const term = k.toLowerCase();
               const stockNameFromCode = stockMap[k];
-              return title.includes(term) || 
+              return title.includes(term) ||
                      stockName.includes(term) ||
                      channelName.includes(term) ||
                      (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
@@ -1638,25 +1845,23 @@
               const title = (row["뉴스 제목"] || row["대표 뉴스 제목"] || "").toLowerCase();
               const stockName = (row["종목명"] || "").toLowerCase();
               const channelName = (row["채널명"] || "").toLowerCase();
-              
+
               return searchTerms.every(k => {
                 const term = k.toLowerCase();
                 const stockNameFromCode = stockMap[k];
-                return title.includes(term) || 
+                return title.includes(term) ||
                        stockName.includes(term) ||
                        channelName.includes(term) ||
                        (stockNameFromCode && stockName.includes(stockNameFromCode.toLowerCase()));
               });
             })
             .map(row => ({ row }));
-          
+
           currentDbData = freshResults;
-          renderNewsCards(currentDbData, "search-results-list", searchTerms);
-          updateSummary(currentDbData);
+          renderDbResults(searchTerms);   // ★ 채널필터 + 검색어 동시 적용
         } else {
           currentDbData = results;
-          renderNewsCards(currentDbData, "search-results-list", searchTerms);
-          updateSummary(currentDbData);
+          renderDbResults(searchTerms);   // ★ 채널필터 + 검색어 동시 적용
         }
 
       } catch (error) {
@@ -1667,7 +1872,7 @@
             ${error.message}
           </div>
         `;
-        document.getElementById("summary").style.display = "none";
+        updateSummary([]);   // ★ 요약박스 제거에 따라 인라인 요약 비우기로 변경
       } finally {
         searchButton.disabled = false;
         searchButton.textContent = "검색";
@@ -1693,7 +1898,7 @@
       try {
         const dbSheet = await findDbSheet();
         const newData = await loadDBData(true);
-        
+
         if (!currentDbData || !Array.isArray(currentDbData)) {
           currentDbData = newData.map((row, index) => ({
             row,
@@ -1716,7 +1921,7 @@
           const time = item["시간"] || item["최신 뉴스 시간"] || "";
           return !currentIds.has(`${title}_${time}`);
         });
-        
+
         if (newItems.length > 0) {
           // 전체 데이터를 다시 가져와서 originalIndex를 올바르게 설정
           currentDbData = newData.map((row, index) => ({
@@ -1727,7 +1932,7 @@
           }));
 
           currentDbData = assignGrade(currentDbData);
-          
+
           // 현재 레이아웃이 'db' 또는 'split'인 경우에만 검색/전체보기 결과 업데이트
           const currentLayout = document.documentElement.getAttribute('data-layout');
           if (currentLayout === 'db' || currentLayout === 'split') {
@@ -1738,8 +1943,8 @@
                 const title = (item.row["뉴스 제목"] || item.row["대표 뉴스 제목"] || "").toLowerCase();
                 const stockName = (item.row["종목명"] || "").toLowerCase();
                 const channelName = (item.row["채널명"] || "").toLowerCase();
-                return keywords.every(kw => 
-                  title.includes(kw) || 
+                return keywords.every(kw =>
+                  title.includes(kw) ||
                   stockName.includes(kw) ||
                   channelName.includes(kw) ||
                   (stockMap[kw] && stockName.includes(stockMap[kw].toLowerCase()))
@@ -1749,11 +1954,11 @@
               // 전체보기 상태면 originalIndex 기준으로 정렬
               currentDbData.sort((a, b) => a.originalIndex - b.originalIndex);
             }
-            
-            renderNewsCards(currentDbData, "search-results-list", currentSearchKeyword ? currentSearchKeyword.split(" ") : []);
-            updateSummary(currentDbData);
+
+            populateChannelSelector();   // ★ 새 채널 유입 반영
+            renderDbResults(currentSearchKeyword ? currentSearchKeyword.split(" ") : []);
           }
-          
+
           return true;
         }
         return false;
@@ -1771,23 +1976,18 @@
           console.log('시트 목록을 가져올 수 없습니다');
           return null;
         }
-        
-        const today = new Date();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const date = String(today.getDate()).padStart(2, '0');
-        const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-        const weekday = weekdays[today.getDay()];
-        
-        const datePattern = `${month}.${date}(${weekday})`;
-        
+
+        // ★ 수정: 오늘 고정 → 선택된 날짜 기준
+        const datePattern = getTargetDatePattern();   // "06.22(월)"
+
         const hotSheet = sheets.find(s => {
           const sheetName = s.name.toLowerCase();
-          return sheetName.includes('hot') && 
+          return sheetName.includes('hot') &&
                  sheetName.includes(datePattern);
         });
 
         if (!hotSheet) {
-          console.log('HOT 시트가 아직 준비되지 않았습니다');
+          console.log(`${datePattern} HOT 시트가 없습니다`);
           return null;
         }
 
@@ -1800,7 +2000,7 @@
 
     // loadHotData 함수 수정
     async function loadHotData(force = false) {
-      if (!force && hotDataCache && lastHotUpdate && 
+      if (!force && hotDataCache && lastHotUpdate &&
           (Date.now() - lastHotUpdate < HOT_UPDATE_INTERVAL)) {
         return hotDataCache;
       }
@@ -1810,16 +2010,16 @@
         if (!hotSheet) {
           return [];  // 시트가 없으면 빈 배열 반환
         }
-        
+
         const response = await fetch(`/sheet/${hotSheet.gid}`);
         if (!response.ok) {
           console.log('HOT 데이터 로드 실패 - 잠시 후 다시 시도합니다');
           return [];
         }
-        
+
         hotDataCache = await response.json();
         lastHotUpdate = Date.now();
-        
+
         return hotDataCache;
       } catch (error) {
         console.log('HOT 데이터 로드 중 일시적인 오류 발생');
@@ -1832,7 +2032,7 @@
       try {
         // 전체 데이터를 새로 가져옴
         const newHotData = await loadHotData(true);
-        
+
         if (!newHotData || !Array.isArray(newHotData) || newHotData.length === 0) {
           console.log('HOT 데이터가 없습니다.');
           return false;
@@ -1854,10 +2054,10 @@
 
         // 등급 할당
         currentHotData = assignGrade(currentHotData);
-        
+
         // 필터링된 데이터 렌더링
         renderFilteredData(currentHotData);
-        
+
         console.log('HOT 데이터 업데이트 완료:', currentHotData.length, '건');
         return true;
       } catch (error) {
@@ -1869,8 +2069,10 @@
     // 주기적 업데이트 함수 수정
     function startPeriodicUpdate() {
       const requestController = new RequestController();
-      
+
       setInterval(async () => {
+        if (!isViewingToday()) return;   // ★ 추가: 과거 날짜 조회 중엔 자동갱신 안 함
+
         // DB와 HOT 데이터를 번갈아가며 체크
         const checkDB = async () => {
           return requestController.addToQueue(async () => {
@@ -1915,7 +2117,7 @@
 
     function setTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
-      
+
       // 버튼 텍스트 업데이트
       const themeToggle = document.querySelector('.theme-toggle');
       if (themeToggle) {
@@ -1933,7 +2135,7 @@
     // 레이아웃 설정 함수
     function setLayout(layout) {
       document.documentElement.setAttribute('data-layout', layout);
-      
+
       // 버튼 활성화 상태 업데이트
       document.querySelectorAll('.layout-controls button').forEach(btn => {
         btn.classList.remove('active');
@@ -1971,13 +2173,13 @@
         if (!sheets) {
           throw new Error("시트 목록을 가져올 수 없습니다.");
         }
-        
+
         const stockSheet = sheets.find(s => s.name === "종목정보");
-        
+
         if (!stockSheet) {
           throw new Error("종목정보 시트를 찾을 수 없습니다.");
         }
-        
+
         console.log('종목정보 시트 찾음:', stockSheet.name);
         return stockSheet;
       } catch (error) {
@@ -1985,24 +2187,24 @@
         throw error;
       }
     }
-    
+
     // 종목 정보 로드
     async function loadStockData() {
       if (stockCache) {
         return stockCache;
       }
-      
+
       try {
         const stockSheet = await findStockSheet();
         const response = await fetch(`/sheet/${stockSheet.gid}`);
-        
+
         if (!response.ok) {
           throw new Error(`API 오류: ${response.status}`);
         }
-        
+
         const data = await response.json();
         stockCache = {};
-        
+
         // 종목코드와 종목명을 매핑 (A열: 종목코드, B열: 종목명)
         data.forEach(row => {
           const values = Object.values(row);
@@ -2012,7 +2214,7 @@
             stockCache[code] = name;
           }
         });
-        
+
         console.log('종목 정보 로드 완료:', Object.keys(stockCache).length, '건');
         return stockCache;
       } catch (error) {
@@ -2026,17 +2228,18 @@
       try {
         // URL 쿼리스트링 제거
         history.replaceState({}, '', location.pathname);
-        
+
         // 검색창 초기화 및 전체보기 상태 설정
         const searchInput = document.getElementById("search-input");
         searchInput.value = "";
         isViewingAll = true;
         currentSearchKeyword = "";
-        
+
         // 전체보기 상태로 초기화
         await getSheets();
+        await populateDateSelector();      // ★ 추가: 날짜 드롭다운 채우기
         stockMap = await loadStockData();  // stockMap에 종목정보 할당
-        
+
         // DB 데이터 로드 및 전체 리스트 렌더링
         const initialDbData = await loadDBData();
         if (initialDbData && initialDbData.length > 0) {
@@ -2046,10 +2249,10 @@
             originalIndex: index
           }));
           currentDbData = assignGrade(currentDbData);
-          renderNewsCards(currentDbData, "search-results-list");
-          updateSummary(currentDbData);
+          populateChannelSelector();   // ★ 채널 목록 갱신
+          renderDbResults();           // ★ 채널필터 적용 렌더링
         }
-        
+
         // 종목코드 자동 치환 기능 추가
         document.getElementById("search-input").addEventListener("input", (e) => {
           const input = e.target.value.trim();
@@ -2057,10 +2260,10 @@
             e.target.value = stockMap[input];
           }
         });
-        
+
         // 스크롤 이벤트 리스너 추가
         window.addEventListener("scroll", handleScroll);
-        
+
         // 맨 위로 버튼 클릭 이벤트 추가
         document.getElementById("scrollToTop").addEventListener("click", () => {
           window.scrollTo({
@@ -2068,22 +2271,22 @@
             behavior: "smooth"
           });
         });
-        
+
         // 검색 버튼 이벤트 리스너 추가
         document.getElementById("search-button").addEventListener("click", () => handleSearch());
-        
+
         // 검색 입력창 Enter 키 이벤트 추가
         document.getElementById("search-input").addEventListener("keypress", (e) => {
           if (e.key === "Enter") {
             handleSearch();
           }
         });
-        
+
         // 검색창 입력 이벤트 리스너 수정
         document.getElementById("search-input").addEventListener("input", (e) => {
           const clearBtn = document.getElementById("clear-search");
           const input = e.target.value.trim();
-          
+
           if (input) {
             clearBtn.style.display = "flex";
             isViewingAll = false;
@@ -2101,20 +2304,20 @@
                   originalIndex: index
                 }));
                 currentDbData = assignGrade(currentDbData);
-                renderNewsCards(currentDbData, "search-results-list");
-                updateSummary(currentDbData);
+                populateChannelSelector();   // ★ 채널 목록 갱신
+                renderDbResults();           // ★ 채널필터 적용 렌더링
               }
             });
           }
         });
-        
+
         // clear-search 버튼 클릭 이벤트 추가
         document.getElementById("clear-search").addEventListener("click", () => {
           document.getElementById("search-input").value = "";
           document.getElementById("clear-search").style.display = "none";
           clearSearch();
         });
-        
+
         // [HOT/DB 분리] 초기화 순서 유지
         const dbData = await loadDBData();
         currentDbData = dbData.map((row, index) => ({
@@ -2124,7 +2327,7 @@
         }));
         // [HOT/DB 분리] DB 데이터에도 등급 할당
         currentDbData = assignGrade(currentDbData);
-        
+
         const hotData = await loadHotData();
         if (hotData) {
           currentHotData = hotData.map((row, index) => ({
@@ -2132,7 +2335,7 @@
             score: calculateScore(row),
             originalIndex: index
           }));
-          
+
           currentHotData = assignGrade(currentHotData);
         }
 
@@ -2140,10 +2343,10 @@
         setTheme('light');
         setLayout('split');
         setFilter('all');
-        
+
         // HOT 데이터 즉시 로딩 추가
         await checkHotDataUpdate();
-        
+
         startPeriodicUpdate();
 
       } catch (error) {
