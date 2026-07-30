@@ -802,10 +802,15 @@
       }
     }
 
-    /* ★ 채널 필터 드롭다운 */
-    #channel-select {
+    /* ★ 채널 필터 — 체크박스 복수선택 드롭다운 */
+    .channel-filter {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    #channel-toggle {
       height: 34px;
-      max-width: 170px;
+      max-width: 190px;
       padding: 4px 10px;
       border-radius: 4px;
       border: 1px solid var(--border-color);
@@ -813,12 +818,111 @@
       color: var(--text-color);
       font-size: 12px;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      overflow: hidden;
     }
 
-    #channel-select.filtered {
+    #channel-toggle:hover {
+      border-color: var(--link-color);
+    }
+
+    #channel-toggle.filtered {
       border-color: #d9534f;
       color: #d9534f;
       font-weight: bold;
+    }
+
+    #channel-panel {
+      display: none;
+      position: absolute;
+      top: 38px;
+      right: 0;
+      width: 290px;
+      max-height: 60vh;
+      overflow-y: auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      z-index: 2000;
+      padding: 8px;
+    }
+
+    #channel-panel.open {
+      display: block;
+    }
+
+    .channel-panel-actions {
+      display: flex;
+      gap: 6px;
+      padding-bottom: 8px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: -8px;
+      background: var(--card-bg);
+    }
+
+    .channel-panel-actions button {
+      flex: 1;
+      padding: 5px 6px;
+      font-size: 11px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-color);
+      color: var(--text-color);
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .channel-panel-actions button:hover {
+      background: var(--link-color);
+      color: #fff;
+      border-color: var(--link-color);
+    }
+
+    .channel-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-color);
+      line-height: 1.3;
+    }
+
+    .channel-item:hover {
+      background: var(--bg-color);
+    }
+
+    .channel-item input {
+      flex-shrink: 0;
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      accent-color: #d9534f;
+    }
+
+    .channel-item .ch-name {
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .channel-item .ch-count {
+      color: var(--text-secondary);
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      #channel-panel {
+        width: 260px;
+      }
     }
 
     /* ★ 검색 결과 제목 옆 인라인 요약 (기존 요약박스 대체) */
@@ -944,9 +1048,21 @@
           </div>
           <button id="search-button">검색</button>
           <button id="show-all-button" style="font-size: 12px;">전체보기</button>
-          <select id="channel-select" onchange="onChannelChange(this.value)" title="채널 필터">
-            <option value="">전체 채널</option>
-          </select>
+          <!-- ★ 채널 복수선택 필터 -->
+          <div class="channel-filter">
+            <button id="channel-toggle" onclick="toggleChannelPanel(event)" title="채널 필터 (복수 선택)">
+              <span id="channel-toggle-text">전체 채널</span>
+              <span style="font-size:10px;">▼</span>
+            </button>
+            <div id="channel-panel">
+              <div class="channel-panel-actions">
+                <button onclick="channelSelectAll()">전체선택</button>
+                <button onclick="channelClearAll()">전체해제</button>
+                <button onclick="channelInvert()">반전</button>
+              </div>
+              <div id="channel-list"></div>
+            </div>
+          </div>
         </div>
         <div id="naver-news-link" style="font-size: 12px; color: var(--text-secondary); margin: 4px 0 0 0;"></div>
       </div>
@@ -976,7 +1092,8 @@
     let lastHotUpdate = null;
     let currentFilter = 'all';
     let selectedDate = null;      // ★ 추가: null = 오늘, "06.22(월)" 형식
-    let selectedChannel = '';     // ★ 추가: '' = 전체 채널
+    let allChannels = [];              // ★ 그날 존재하는 전체 채널 목록
+    let selectedChannels = new Set();  // ★ 체크된(=표시할) 채널들
     let isViewingAll = true;
     let currentSearchKeyword = "";
     const DB_UPDATE_INTERVAL = 300000; // 5분
@@ -1141,7 +1258,8 @@
         } else {
           currentDbData = [];
           dbCache = [];
-          selectedChannel = '';
+          allChannels = [];
+          selectedChannels = new Set();
           populateChannelSelector();
           renderDbResults();
         }
@@ -1149,7 +1267,8 @@
         console.log('DB 로드 실패:', e.message);
         currentDbData = [];
         dbCache = [];
-        selectedChannel = '';
+        allChannels = [];
+        selectedChannels = new Set();
         populateChannelSelector();
         renderDbResults();
       }
@@ -1168,10 +1287,11 @@
       return m ? `${m[1]}:${m[2]}` : '';
     }
 
-    // 선택된 채널로 걸러내기
+    // 체크된 채널만 남기기 (전부 체크 상태면 필터 없음으로 처리)
     function getChannelFiltered(items) {
-      if (!selectedChannel) return items;
-      return items.filter(it => (it.row["채널명"] || "").trim() === selectedChannel);
+      if (!allChannels.length) return items;                 // 채널 목록 미구성
+      if (selectedChannels.size === allChannels.length) return items;  // 전체선택 = 필터 없음
+      return items.filter(it => selectedChannels.has((it.row["채널명"] || "").trim()));
     }
 
     // DB 검색결과 렌더링 통합 (채널필터 + 요약 갱신을 항상 함께 처리)
@@ -1181,10 +1301,38 @@
       updateSummary(shown);
     }
 
-    // 채널 드롭다운 채우기 (원본 dbCache 기준, 건수 많은 순)
+    // 버튼 라벨 + 강조 상태 갱신
+    function updateChannelToggleLabel() {
+      const btn = document.getElementById('channel-toggle');
+      const txt = document.getElementById('channel-toggle-text');
+      if (!btn || !txt) return;
+
+      const total = allChannels.length;
+      const sel = selectedChannels.size;
+
+      if (total === 0) {
+        txt.textContent = '전체 채널';
+        btn.classList.remove('filtered');
+      } else if (sel === total) {
+        txt.textContent = `전체 채널 (${total})`;
+        btn.classList.remove('filtered');
+      } else if (sel === 0) {
+        txt.textContent = '채널 0개 선택';
+        btn.classList.add('filtered');
+      } else if (sel === 1) {
+        const only = [...selectedChannels][0];
+        txt.textContent = only.length > 14 ? only.slice(0, 14) + '…' : only;
+        btn.classList.add('filtered');
+      } else {
+        txt.textContent = `채널 ${sel}/${total}개`;
+        btn.classList.add('filtered');
+      }
+    }
+
+    // 채널 목록 만들기 (원본 dbCache 기준, 건수 많은 순)
     function populateChannelSelector() {
-      const sel = document.getElementById('channel-select');
-      if (!sel) return;
+      const listEl = document.getElementById('channel-list');
+      if (!listEl) return;
 
       const raw = dbCache || [];
       const counts = {};
@@ -1193,40 +1341,119 @@
         if (ch) counts[ch] = (counts[ch] || 0) + 1;
       });
 
-      const list = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-      const prev = selectedChannel;
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const prevAll  = allChannels.slice();
+      const prevSel  = new Set(selectedChannels);
+      allChannels = sorted.map(([ch]) => ch);
 
-      sel.innerHTML = '';
-      const optAll = document.createElement('option');
-      optAll.value = '';
-      optAll.textContent = `전체 채널 (${raw.length})`;
-      sel.appendChild(optAll);
-
-      list.forEach(([ch, cnt]) => {
-        const o = document.createElement('option');
-        o.value = ch;
-        o.textContent = `${ch} (${cnt})`;
-        sel.appendChild(o);
-      });
-
-      // 날짜 바뀌어도 같은 채널이 있으면 선택 유지
-      if (prev && counts[prev]) {
-        sel.value = prev;
+      // 선택 상태 승계 규칙
+      //  - 첫 구성이거나 이전에 전체선택 상태였으면 → 전체선택 유지
+      //  - 아니면 기존 선택 유지 + 새로 등장한 채널은 자동 포함(뉴스 누락 방지)
+      const wasAllSelected = prevAll.length > 0 && prevSel.size === prevAll.length;
+      if (prevAll.length === 0 || wasAllSelected) {
+        selectedChannels = new Set(allChannels);
       } else {
-        selectedChannel = '';
-        sel.value = '';
+        const next = new Set();
+        allChannels.forEach(ch => {
+          if (prevSel.has(ch) || !prevAll.includes(ch)) next.add(ch);
+        });
+        selectedChannels = next;
       }
-      sel.classList.toggle('filtered', !!selectedChannel);
+
+      // 체크박스 목록 렌더링
+      listEl.innerHTML = '';
+      if (!sorted.length) {
+        listEl.innerHTML = '<div style="padding:8px; font-size:12px; color:var(--text-secondary);">채널 없음</div>';
+        updateChannelToggleLabel();
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      sorted.forEach(([ch, cnt]) => {
+        const label = document.createElement('label');
+        label.className = 'channel-item';
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = selectedChannels.has(ch);
+        cb.dataset.channel = ch;
+        cb.addEventListener('change', () => onChannelToggle(ch, cb.checked));
+
+        const name = document.createElement('span');
+        name.className = 'ch-name';
+        name.textContent = ch;
+
+        const num = document.createElement('span');
+        num.className = 'ch-count';
+        num.textContent = `${cnt}건`;
+
+        label.appendChild(cb);
+        label.appendChild(name);
+        label.appendChild(num);
+        frag.appendChild(label);
+      });
+      listEl.appendChild(frag);
+
+      updateChannelToggleLabel();
     }
 
-    // 채널 변경 (검색어와 AND 조건으로 동작)
-    function onChannelChange(value) {
-      selectedChannel = value || '';
-      const sel = document.getElementById('channel-select');
-      if (sel) sel.classList.toggle('filtered', !!selectedChannel);
-
-      renderDbResults(currentSearchKeyword ? currentSearchKeyword.split(" ") : []);
+    // 현재 검색어 배열
+    function currentKeywords() {
+      return currentSearchKeyword ? currentSearchKeyword.split(" ") : [];
     }
+
+    // 개별 채널 체크/해제 (검색어와 AND 조건)
+    function onChannelToggle(channel, checked) {
+      if (checked) selectedChannels.add(channel);
+      else selectedChannels.delete(channel);
+      updateChannelToggleLabel();
+      renderDbResults(currentKeywords());
+    }
+
+    // 패널 내 체크박스 UI를 selectedChannels 상태와 동기화
+    function syncChannelCheckboxes() {
+      document.querySelectorAll('#channel-list input[type="checkbox"]').forEach(cb => {
+        cb.checked = selectedChannels.has(cb.dataset.channel);
+      });
+    }
+
+    function channelSelectAll() {
+      selectedChannels = new Set(allChannels);
+      syncChannelCheckboxes();
+      updateChannelToggleLabel();
+      renderDbResults(currentKeywords());
+    }
+
+    function channelClearAll() {
+      selectedChannels = new Set();
+      syncChannelCheckboxes();
+      updateChannelToggleLabel();
+      renderDbResults(currentKeywords());
+    }
+
+    function channelInvert() {
+      const next = new Set();
+      allChannels.forEach(ch => { if (!selectedChannels.has(ch)) next.add(ch); });
+      selectedChannels = next;
+      syncChannelCheckboxes();
+      updateChannelToggleLabel();
+      renderDbResults(currentKeywords());
+    }
+
+    // 패널 열기/닫기
+    function toggleChannelPanel(e) {
+      if (e) e.stopPropagation();
+      const panel = document.getElementById('channel-panel');
+      if (panel) panel.classList.toggle('open');
+    }
+
+    // 패널 바깥 클릭 시 닫기
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('channel-panel');
+      if (!panel || !panel.classList.contains('open')) return;
+      if (e.target.closest('.channel-filter')) return;   // 패널 내부 클릭은 유지
+      panel.classList.remove('open');
+    });
     // ★★★ 채널 필터 기능 끝 ★★★
 
     // 점수 계산
@@ -1744,7 +1971,11 @@
         if (first && last) range = ` · ${first}~${last}`;
       }
 
-      const chText = selectedChannel ? `채널 「${selectedChannel}」` : `채널 ${channels.size}개`;
+      // 채널 필터가 걸려 있으면 몇 개 중 몇 개인지 표시
+      const isFiltered = allChannels.length > 0 && selectedChannels.size !== allChannels.length;
+      const chText = isFiltered
+        ? `채널 ${channels.size}개 (필터 ${selectedChannels.size}/${allChannels.length})`
+        : `채널 ${channels.size}개`;
       el.textContent = `${matches.length}건 · ${chText}${range}`;
     }
 
